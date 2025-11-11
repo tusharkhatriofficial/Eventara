@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:14
+    container_name: postgres14
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: studentsDB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+
+# Usage:
+# Start: docker-compose up -d
+# Stop: docker-compose down
+# View logs: docker-compose logs -f postgres
+# Access psql: docker-compose exec postgres psql -U postgres -d mydb
+# Restart: docker-compose restart postgres
