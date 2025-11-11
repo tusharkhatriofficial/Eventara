@@ -1,6 +1,5 @@
 package com.eventara.ingestion.model.dto;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.Instant;
 import java.util.HashMap;
@@ -25,7 +24,6 @@ public class EventRequest {
     private String severity; // will convert this to enum
     private Map<String, String> tags = new HashMap<>();
     private Map<String, Object> metadata = new HashMap<>();
-
 
     public EventRequest(){
         this.timestamp = Instant.now();
