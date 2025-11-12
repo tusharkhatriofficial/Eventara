@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: studentsDB
+      POSTGRES_DB: eventara
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,13 +17,37 @@ services:
       timeout: 5s
       retries: 5
 
+  springboot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: springboot-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eventara
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: mysecretpassword
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_PROFILES_ACTIVE: docker
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     driver: local
 
 # Usage:
-# Start: docker-compose up -d
-# Stop: docker-compose down
-# View logs: docker-compose logs -f postgres
+# docker compose up --build -d
+# docker compose logs -f springboot
+# View postgres logs: docker-compose logs -f postgres
+# docker compose down
+
+# wipe db data too
+#  docker compose down -v
+
 # Access psql: docker-compose exec postgres psql -U postgres -d mydb
 # Restart: docker-compose restart postgres
+
