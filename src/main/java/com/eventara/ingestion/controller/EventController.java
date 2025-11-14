@@ -1,4 +1,4 @@
-package com.eventara.ingestion.controller.api.v1;
+package com.eventara.ingestion.controller;
 import com.eventara.ingestion.model.dto.EventRequest;
 import com.eventara.ingestion.model.dto.EventResponse;
 import com.eventara.ingestion.service.EventService;
