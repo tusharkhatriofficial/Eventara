@@ -1,9 +1,13 @@
 Eventara
+
 <div align="center">
   
 Real-Time Event Analytics & Alerting Platform
 
 🚧 Under Active Development 🚧
+
+<img width="1024" height="470" alt="20251114_1927_Eventara GitHub Banner_simple_compose_01ka1acqfwed3a8qzw1vzw2rr8 (1)" src="https://github.com/user-attachments/assets/106068a7-0527-498f-8b5e-02a2f9f4810c" />
+
 
 </div>
 
