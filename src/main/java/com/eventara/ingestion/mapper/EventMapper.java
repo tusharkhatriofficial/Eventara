@@ -1,4 +1,5 @@
 package com.eventara.ingestion.mapper;
+import com.eventara.ingestion.model.dto.EventDto;
 import com.eventara.ingestion.model.dto.EventRequest;
 import com.eventara.ingestion.model.dto.EventResponse;
 import com.eventara.ingestion.model.entity.Event;
@@ -6,6 +7,26 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class EventMapper {
+
+    //convert Event to  Dto ()
+    public EventDto toDto(Event entity){
+        EventDto eventDto = new EventDto();
+        eventDto.setEventId(entity.getEventId());
+        eventDto.setEventType(entity.getEventType());
+        eventDto.setSource(entity.getSource());
+        eventDto.setUserId(entity.getUserId());
+        eventDto.setReceivedAt(entity.getReceivedAt());
+        eventDto.setTimestamp(entity.getTimestamp());
+        eventDto.setTags(entity.getTags());
+        eventDto.setMetadata(entity.getMetadata());
+
+        if(entity.getSeverity() != null){
+            eventDto.setSeverity(entity.getSeverity().name());
+        }
+
+        return  eventDto;
+    }
+
 
     //converting Request DTO to entity
     public Event toEntity(EventRequest request){
