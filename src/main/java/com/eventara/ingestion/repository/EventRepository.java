@@ -1,15 +1,14 @@
 package com.eventara.ingestion.repository;
-
+import org.springframework.data.domain.Pageable;
 import com.eventara.ingestion.model.entity.Event;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import javax.swing.text.html.Option;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long> {
@@ -35,6 +34,14 @@ public interface EventRepository extends JpaRepository<Event, Long> {
      * Useful for analytics and reporting (Module 2)
      */
     List<Event> findByTimestampBetween(Instant startTime, Instant endTime);
+
+    //Pagenated queries
+   Page<Event> findAllByOrderByTimestampDesc(Pageable pageable);
+
+   Page<Event> findByEventTypeOrderByTimestampDesc(String eventType, Pageable pageable);
+
+   Page<Event> findBySourceOrderByTimestampDesc(String source, Pageable pageable);
+
 
     /**
      * Count events by type (for analytics)

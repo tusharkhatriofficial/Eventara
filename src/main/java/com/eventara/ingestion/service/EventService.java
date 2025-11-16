@@ -1,13 +1,20 @@
 package com.eventara.ingestion.service;
 import com.eventara.ingestion.kafka.EventProducer;
 import com.eventara.ingestion.mapper.EventMapper;
+import com.eventara.ingestion.model.dto.EventDto;
 import com.eventara.ingestion.model.dto.EventRequest;
 import com.eventara.ingestion.model.dto.EventResponse;
 import com.eventara.ingestion.model.entity.Event;
+import com.eventara.ingestion.repository.EventRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 
 @Component
@@ -18,8 +25,8 @@ public class EventService {
     @Autowired
     private EventMapper eventMapper;
 
-//    @Autowired
-//    private EventRepository eventRepository;
+    @Autowired
+    private EventRepository eventRepository;
 
     @Autowired
     private EventProducer eventProducer;  // ← NEW: Kafka Producer
@@ -48,6 +55,41 @@ public class EventService {
 
         //convert entity to dto
         return response;
+    }
+
+    //Get paginated events
+    public Page<EventDto> getEvents(int page, int size){
+        logger.info("Fetching events: page={}, size={}", page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Event> events = eventRepository.findAllByOrderByTimestampDesc(pageable);
+
+        return events.map(eventMapper::toDto);
+    }
+
+    //Get paginated events by type
+    public Page<EventDto> getEventsByType(String eventType, int page, int size) {
+        logger.info("Fetching events by type: eventType={}, page={}, size={}",
+                eventType, page, size);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Event> events = eventRepository.findByEventTypeOrderByTimestampDesc(
+                eventType, pageable
+        );
+
+        Page<EventDto> res = events.map(eventMapper::toDto);
+
+        return res;
+    }
+
+    //Get single event by eventId
+    public EventDto getEventById(String eventId) {
+        logger.info("Fetching event by id: eventId={}", eventId);
+
+        Event event = eventRepository.findByEventId(eventId)
+                .orElseThrow(() -> new RuntimeException("Event not found: " + eventId));
+
+        return eventMapper.toDto(event);
     }
 
 

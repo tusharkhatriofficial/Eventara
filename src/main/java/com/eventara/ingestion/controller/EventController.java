@@ -1,4 +1,5 @@
 package com.eventara.ingestion.controller;
+import com.eventara.ingestion.model.dto.EventDto;
 import com.eventara.ingestion.model.dto.EventRequest;
 import com.eventara.ingestion.model.dto.EventResponse;
 import com.eventara.ingestion.service.EventService;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -71,6 +73,61 @@ public class EventController {
                 .status(HttpStatus.NOT_IMPLEMENTED)
                 .body("Ba/tch ingestion coming in Module 2!");
     }
+
+
+    @GetMapping
+    @Operation(summary = "Get paginated events", description = "Retrieve events with pagination, sorted by timestamp (newest first)")
+    public ResponseEntity<Page<EventDto>> getEvents(
+            @RequestParam int page,
+            @RequestParam int size
+    ){
+        logger.info("GET /events - page={}, size={}", page, size);
+
+        // Limiting max page size
+        if (size > 100) {
+            size = 100;
+        }
+
+        Page<EventDto> res = eventService.getEvents(page, size);;
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/type/{eventType}")
+    @Operation(summary = "Get events by type")
+    public ResponseEntity<Page<EventDto>> getEventsByType(
+            @PathVariable String eventType,
+            @RequestParam int page,
+            @RequestParam int size
+    ){
+
+        // Limiting max page size
+        if (size > 100) {
+            size = 100;
+        }
+
+        Page<EventDto> res = eventService.getEventsByType(eventType, page, size);
+
+        return ResponseEntity.ok(res);
+    }
+
+    //get event by id
+    @GetMapping("/{eventId}")
+    @Operation(summary = "Get event by ID")
+    public ResponseEntity<EventDto> getEventById(
+            @PathVariable String eventId
+    ){
+        logger.info("GET /events/{}", eventId);
+
+        try{
+            EventDto event = eventService.getEventById(eventId);
+            return ResponseEntity.ok(event);
+        }catch (RuntimeException e){
+            logger.error("Event not found: {}", eventId);
+            return ResponseEntity.notFound().build();
+        }
+
+    }
+
 
     @GetMapping("/test")
     @Operation(summary = "Test endpoint", description = "Verify the API is running")
