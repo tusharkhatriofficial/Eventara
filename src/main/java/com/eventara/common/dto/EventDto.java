@@ -1,7 +1,9 @@
 package com.eventara.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,4 +98,26 @@ public class EventDto {
     public void setMetadata(Map<String, Object> metadata) {
         this.metadata = metadata;
     }
+
+    //Calculate processing latency in milliseconds
+    @JsonIgnore
+    public long getProcessingLatencyMs(){
+        if(timestamp!=null && receivedAt != null){
+            return Duration.between(timestamp, receivedAt).toMillis();
+        }
+        return 0;
+    }
+
+    @JsonIgnore
+    public boolean isError() {
+        return "ERROR".equalsIgnoreCase(severity) || "CRITICAL".equalsIgnoreCase(severity);
+    }
+
+    @JsonIgnore
+    public String getTag(String key) {
+        return tags != null ? tags.get(key) : null;
+    }
+
+
+
 }
