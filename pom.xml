@@ -75,6 +75,12 @@
 			<artifactId>jackson-datatype-jsr310</artifactId>
 		</dependency>
 
+<!--		kafka streams-->
+		<dependency>
+			<groupId>org.apache.kafka</groupId>
+			<artifactId>kafka-streams</artifactId>
+		</dependency>
+
 
 	</dependencies>
 

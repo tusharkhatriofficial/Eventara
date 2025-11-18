@@ -1,7 +1,7 @@
 package com.eventara.ingestion.controller;
-import com.eventara.ingestion.model.dto.EventDto;
-import com.eventara.ingestion.model.dto.EventRequest;
-import com.eventara.ingestion.model.dto.EventResponse;
+import com.eventara.common.dto.EventDto;
+import com.eventara.common.dto.EventRequest;
+import com.eventara.common.dto.EventResponse;
 import com.eventara.ingestion.service.EventService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

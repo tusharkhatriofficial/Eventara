@@ -1,4 +1,4 @@
-package com.eventara.ingestion.model.dto;
+package com.eventara.common.dto;
 import jakarta.validation.constraints.NotBlank;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.Instant;

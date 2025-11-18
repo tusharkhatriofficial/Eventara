@@ -1,4 +1,4 @@
-package com.eventara.ingestion.model.dto;
+package com.eventara.common.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 

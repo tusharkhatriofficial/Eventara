@@ -1,6 +1,6 @@
 package com.eventara.ingestion.kafka;
 import com.eventara.ingestion.model.entity.Event;
-import com.eventara.ingestion.repository.EventRepository;
+import com.eventara.common.repository.EventRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +12,6 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.Map;
 
 @Service
 public class EventConsumer {

@@ -1,4 +1,4 @@
-package com.eventara.ingestion.repository;
+package com.eventara.common.repository;
 import org.springframework.data.domain.Pageable;
 import com.eventara.ingestion.model.entity.Event;
 import org.springframework.data.domain.Page;
