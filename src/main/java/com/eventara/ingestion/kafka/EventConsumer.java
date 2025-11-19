@@ -1,4 +1,8 @@
 package com.eventara.ingestion.kafka;
+import com.eventara.analytics.service.ComprehensiveMetricsService;
+import com.eventara.common.dto.ComprehensiveMetricsDto;
+import com.eventara.common.dto.EventDto;
+import com.eventara.ingestion.mapper.EventMapper;
 import com.eventara.ingestion.model.entity.Event;
 import com.eventara.common.repository.EventRepository;
 import jakarta.transaction.Transactional;
@@ -23,6 +27,9 @@ public class EventConsumer {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ComprehensiveMetricsService comprehensiveMetricsService;
 
     /*
      * Listens to Kafka topic and processes events
@@ -66,6 +73,11 @@ public class EventConsumer {
 
             //Saving to db
             Event savedEvent = eventRepository.save(event);
+
+            //Sending data to metrics i.e sending to analytics service
+            EventMapper eventMapper = new EventMapper();
+            EventDto eventDto = eventMapper.toDto(savedEvent);
+            comprehensiveMetricsService.recordEvent(eventDto);
 
             logger.info("Successfully saved event to database: eventId={}, dbId={}",
                     savedEvent.getEventId(), savedEvent.getId());
