@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Eventara WebSocket Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h1>Eventara Live Metrics</h1>
+<div id="status">Connecting...</div>
+<pre id="metrics"></pre>
+
+<script>
+    const socket = new SockJS('http://localhost:8080/ws');
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function(frame) {
+        console.log('Connected: ' + frame);
+        document.getElementById('status').innerHTML = 'Connected!';
+
+        stompClient.subscribe('/topic/metrics', function(message) {
+            const metrics = JSON.parse(message.body);
+            document.getElementById('metrics').innerHTML = JSON.stringify(metrics, null, 2);
+        });
+    });
+
+    stompClient.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        document.getElementById('status').innerHTML = '❌ Connection Error';
+    };
+</script>
+</body>
+</html>
