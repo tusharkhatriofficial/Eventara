@@ -13,7 +13,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     switch (connectionState) {
       case ConnectionState.CONNECTED:
         return {
-          icon: '✅',
+          icon: '',
           text: 'Connected',
           bgColor: 'bg-green-100',
           textColor: 'text-green-800',
@@ -22,7 +22,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case ConnectionState.CONNECTING:
         return {
-          icon: '⏳',
+          icon: '',
           text: 'Connecting...',
           bgColor: 'bg-blue-100',
           textColor: 'text-blue-800',
@@ -31,7 +31,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case ConnectionState.RECONNECTING:
         return {
-          icon: '🔄',
+          icon: '',
           text: 'Reconnecting...',
           bgColor: 'bg-yellow-100',
           textColor: 'text-yellow-800',
@@ -40,7 +40,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case ConnectionState.DISCONNECTED:
         return {
-          icon: '⚠️',
+          icon: '',
           text: 'Disconnected',
           bgColor: 'bg-gray-100',
           textColor: 'text-gray-800',
@@ -49,7 +49,7 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         };
       case ConnectionState.ERROR:
         return {
-          icon: '❌',
+          icon: '',
           text: 'Connection Error',
           bgColor: 'bg-red-100',
           textColor: 'text-red-800',
