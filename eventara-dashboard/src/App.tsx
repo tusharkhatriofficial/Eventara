@@ -10,6 +10,7 @@ import { EventAnalytics } from './pages/EventAnalytics';
 import { SourceAnalytics } from './pages/SourceAnalytics';
 import { UserAnalytics } from './pages/UserAnalytics';
 import { PerformanceMetrics } from './pages/PerformanceMetrics';
+import { ErrorAnalysis } from './pages/ErrorAnalysis';
 
 function App() {
   const { metrics, connectionState, reconnect } = useWebSocketMetrics();
@@ -31,7 +32,7 @@ function App() {
           <Route path="/sources" element={<SourceAnalytics metrics={metrics} />} />
           <Route path="/users" element={<UserAnalytics metrics={metrics} />} />
           <Route path="/performance" element={<PerformanceMetrics metrics={metrics} />} />
-          <Route path="/errors" element={<ComingSoon pageName="Error Analysis" />} />
+          <Route path="/errors" element={<ErrorAnalysis metrics={metrics} />} />
           <Route path="/alerts" element={<ComingSoon pageName="Alerts & Anomalies" />} />
           <Route path="/reports" element={<ComingSoon pageName="Reports" />} />
         </Route>
