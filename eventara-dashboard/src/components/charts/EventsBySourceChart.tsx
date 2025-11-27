@@ -55,7 +55,7 @@ export const EventsBySourceChart: React.FC<EventsBySourceChartProps> = ({ events
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
-        🥧 Events by Source
+        Events by Source
       </h3>
       <div className="h-64">
         {sources.length > 0 ? (
