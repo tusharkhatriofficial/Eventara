@@ -84,22 +84,48 @@ Watch the dashboard update in real-time at http://localhost:5173 🎉
 
 ### Run Demo Script (20-second showcase)
 
+macOS zsh / Linux bash
+
 ```shell
 for i in {1..60}; do
-curl -s -X POST http://localhost:8080/api/v1/events
--H "Content-Type: application/json"
--d '{"eventType":"user.login","source":"auth-service","userId":"user_1","severity":"INFO"}' &&
-curl -s -X POST http://localhost:8080/api/v1/events
--H "Content-Type: application/json"
--d '{"eventType":"payment.success","source":"payment-service","userId":"user_2","severity":"INFO"}' &&
-curl -s -X POST http://localhost:8080/api/v1/events
--H "Content-Type: application/json"
--d '{"eventType":"order.created","source":"order-service","userId":"user_3","severity":"WARNING"}' &&
-curl -s -X POST http://localhost:8080/api/v1/events
--H "Content-Type: application/json"
--d '{"eventType":"payment.failed","source":"payment-service","userId":"user_4","severity":"ERROR"}'
-sleep 0.3
+  curl -s -X POST http://localhost:8080/api/v1/events \
+    -H "Content-Type: application/json" \
+    -d '{"eventType":"user.login","source":"auth-service","userId":"user_1","severity":"INFO"}' &&
+  curl -s -X POST http://localhost:8080/api/v1/events \
+    -H "Content-Type: application/json" \
+    -d '{"eventType":"payment.success","source":"payment-service","userId":"user_2","severity":"INFO"}' &&
+  curl -s -X POST http://localhost:8080/api/v1/events \
+    -H "Content-Type: application/json" \
+    -d '{"eventType":"order.created","source":"order-service","userId":"user_3","severity":"WARNING"}' &&
+  curl -s -X POST http://localhost:8080/api/v1/events \
+    -H "Content-Type: application/json" \
+    -d '{"eventType":"payment.failed","source":"payment-service","userId":"user_4","severity":"ERROR"}'
+  sleep 0.3
 done
+```
+
+Windows PowerShell
+
+```shell
+for ($i = 1; $i -le 60; $i++) {
+    curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
+        -Headers @{ "Content-Type"="application/json" } `
+        -Body '{"eventType":"user.login","source":"auth-service","userId":"user_1","severity":"INFO"}'
+
+    curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
+        -Headers @{ "Content-Type"="application/json" } `
+        -Body '{"eventType":"payment.success","source":"payment-service","userId":"user_2","severity":"INFO"}'
+
+    curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
+        -Headers @{ "Content-Type"="application/json" } `
+        -Body '{"eventType":"order.created","source":"order-service","userId":"user_3","severity":"WARNING"}'
+
+    curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
+        -Headers @{ "Content-Type"="application/json" } `
+        -Body '{"eventType":"payment.failed","source":"payment-service","userId":"user_4","severity":"ERROR"}'
+
+    Start-Sleep -Milliseconds 300
+}
 ```
 
 ---
