@@ -1,6 +1,6 @@
 Eventara
 <div align="center">
-  Real-Time Event Analytics & Alearting Platform
+  Real-Time Event Analytics & Alerting Platform
   <br> <br> 
   <!-- <img width="1024" height="470" alt="Eventara Banner" src="https://github.com/user-attachments/assets/106068a7-0527-498f-8b5e-02a2f9f4810c" />  -->
 <img width="1440" height="732" alt="Screenshot 2025-11-29 at 12 03 49 AM" src="https://github.com/user-attachments/assets/423d92aa-7bc0-4f6a-90cf-8f6d5c22c71a" />
