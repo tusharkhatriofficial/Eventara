@@ -206,22 +206,79 @@ public class DrlGeneratorService {
         MetricType type = MetricType.valueOf(metricType);
 
         switch (type) {
+            // Error Metrics
             case ERROR_RATE:
                 return "errorRate";
-            case ERROR_COUNT:
-                return "errorCount";
+            case TOTAL_ERRORS:
+                return "totalErrors";
+
+            // Performance Metrics
             case AVG_LATENCY:
                 return "avgLatency";
+            case P50_LATENCY:
+                return "p50Latency";
             case P95_LATENCY:
                 return "p95Latency";
             case P99_LATENCY:
                 return "p99Latency";
+            case MAX_LATENCY:
+                return "maxLatency";
+            case MIN_LATENCY:
+                return "minLatency";
+
+            // Throughput Metrics
             case EVENTS_PER_SECOND:
                 return "eventsPerSecond";
+            case EVENTS_PER_MINUTE:
+                return "eventsPerMinute";
+            case EVENTS_PER_HOUR:
+                return "eventsPerHour";
+            case EVENTS_PER_DAY:
+                return "eventsPerDay";
+            case PEAK_THROUGHPUT:
+                return "peakThroughput";
+            case AVG_THROUGHPUT_1H:
+                return "avgThroughputLast1Hour";
+            case AVG_THROUGHPUT_24H:
+                return "avgThroughputLast24Hours";
+
+            // Time Window Metrics
+            case EVENTS_LAST_1_MINUTE:
+                return "eventsLast1Minute";
+            case EVENTS_LAST_5_MINUTES:
+                return "eventsLast5Minutes";
+            case EVENTS_LAST_15_MINUTES:
+                return "eventsLast15Minutes";
+            case EVENTS_LAST_1_HOUR:
+                return "eventsLast1Hour";
+            case EVENTS_LAST_24_HOURS:
+                return "eventsLast24Hours";
+
+            // Summary Metrics
+            case TOTAL_EVENTS:
+                return "totalEvents";
+            case UNIQUE_SOURCES:
+                return "uniqueSources";
+            case UNIQUE_EVENT_TYPES:
+                return "uniqueEventTypes";
+            case UNIQUE_USERS:
+                return "uniqueUsers";
+            case SYSTEM_HEALTH:
+                return "systemHealth";
+
+            // User Metrics
+            case ACTIVE_USERS_LAST_1_HOUR:
+                return "activeUsersLast1Hour";
+            case ACTIVE_USERS_LAST_24_HOURS:
+                return "activeUsersLast24Hours";
+            case TOTAL_UNIQUE_USERS:
+                return "totalUniqueUsers";
+
             default:
                 return metricType.toLowerCase();
         }
     }
+
 
     private String getGetterMethod(String fieldName) {
         return "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
