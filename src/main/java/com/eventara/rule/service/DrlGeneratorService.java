@@ -65,15 +65,110 @@ public class DrlGeneratorService {
         }
     }
 
+    /**
+     * Get the Java type for a metric
+     */
+    private String getMetricJavaType(String metricType) {
+        MetricType type = MetricType.valueOf(metricType);
+
+        switch (type) {
+            // Long types (counts)
+            case TOTAL_ERRORS:
+            case EVENTS_LAST_1_MINUTE:
+            case EVENTS_LAST_5_MINUTES:
+            case EVENTS_LAST_15_MINUTES:
+            case EVENTS_LAST_1_HOUR:
+            case EVENTS_LAST_24_HOURS:
+            case TOTAL_EVENTS:
+            case ACTIVE_USERS_LAST_1_HOUR:
+            case ACTIVE_USERS_LAST_24_HOURS:
+            case TOTAL_UNIQUE_USERS:
+                return "Long";
+
+            // Integer types (unique counts)
+            case UNIQUE_SOURCES:
+            case UNIQUE_EVENT_TYPES:
+            case UNIQUE_USERS:
+                return "Integer";
+
+            // String types
+            case SYSTEM_HEALTH:
+                return "String";
+
+            // Double types (default - rates, percentages, latencies)
+            default:
+                return "Double";
+        }
+    }
+
+    /**
+     * Generate cast expression to convert to Double
+     */
+    private String getCastExpression(String metricPath, String javaType) {
+        String getter = getGetterMethod(metricPath);
+
+        switch (javaType) {
+            case "Long":
+                return "Double.valueOf($metrics." + getter + "())";
+            case "Integer":
+                return "Double.valueOf($metrics." + getter + "())";
+            case "String":
+                // For string comparisons, return 0.0 (not used in threshold comparison)
+                return "0.0";
+            case "Double":
+            default:
+                return "$metrics." + getter + "()";
+        }
+    }
+
+
+//    private String generateThresholdDrl(CreateRuleRequest request) {
+//        Map<String, Object> config = request.getRuleConfig();
+//
+//        String metricType = config.get("metricType").toString();
+//        String condition = config.get("condition").toString();
+//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
+//
+//        String metricPath = getMetricPath(metricType);
+//        String operator = Condition.valueOf(condition).getOperator();
+//
+//        // Get the Java type for this metric
+//        String javaType = getMetricJavaType(metricType);
+//        String castExpression = getCastExpression(metricPath, javaType);
+//
+//        StringBuilder drl = new StringBuilder();
+//        drl.append("package com.eventara.rules\n\n");
+//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+//
+//        drl.append("rule \"").append(request.getName()).append("\"\n");
+//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
+//        drl.append("    when\n");
+//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
+//        drl.append("        $handler: AlertTriggerHandler()\n");
+//        drl.append("    then\n");
+//        drl.append("        $handler.handleThresholdAlert(\n");
+//        drl.append("            null,\n");
+//        drl.append("            \"").append(request.getName()).append("\",\n");
+//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
+//        drl.append("            ").append(thresholdValue).append(",\n");
+//        drl.append("            ").append(castExpression).append("\n");  // ← FIXED: Cast to Double
+//        drl.append("        );\n");
+//        drl.append("end\n");
+//
+//        return drl.toString();
+//    }
+
     private String generateThresholdDrl(CreateRuleRequest request) {
         Map<String, Object> config = request.getRuleConfig();
 
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
-        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
+        Object thresholdValueObj = config.get("thresholdValue");
 
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
+        String javaType = getMetricJavaType(metricType);
 
         StringBuilder drl = new StringBuilder();
         drl.append("package com.eventara.rules\n\n");
@@ -83,63 +178,202 @@ public class DrlGeneratorService {
         drl.append("rule \"").append(request.getName()).append("\"\n");
         drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
         drl.append("    when\n");
-        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
-        drl.append("        $handler: AlertTriggerHandler()\n");
-        drl.append("    then\n");
-        drl.append("        $handler.handleThresholdAlert(\n");
-        drl.append("            null,\n");  // ← FIXED: Always null for CreateRuleRequest
-        drl.append("            \"").append(request.getName()).append("\",\n");
-        drl.append("            \"").append(request.getSeverity()).append("\",\n");
-        drl.append("            ").append(thresholdValue).append(",\n");
-        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
-        drl.append("        );\n");
-        drl.append("end\n");
 
-        return drl.toString();
-    }
+        // Build condition based on type
+        if ("String".equals(javaType)) {
+            // String comparison
+            String thresholdValue = thresholdValueObj.toString();
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" \"")
+                    .append(thresholdValue)
+                    .append("\")\n");
+        } else {
+            // Numeric comparison
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" ")
+                    .append(thresholdValue)
+                    .append(")\n");
+        }
 
-    private String generateThresholdDrl(UpdateRuleRequest request) {
-        Map<String, Object> config = request.getRuleConfig();
-
-        String metricType = config.get("metricType").toString();
-        String condition = config.get("condition").toString();
-        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
-
-        String metricPath = getMetricPath(metricType);
-        String operator = Condition.valueOf(condition).getOperator();
-
-        StringBuilder drl = new StringBuilder();
-        drl.append("package com.eventara.rules\n\n");
-        drl.append("import com.eventara.drools.fact.MetricsFact\n");
-        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-
-        drl.append("rule \"").append(request.getName()).append("\"\n");
-        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-        drl.append("    when\n");
-        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
         drl.append("        $handler: AlertTriggerHandler()\n");
         drl.append("    then\n");
         drl.append("        $handler.handleThresholdAlert(\n");
         drl.append("            null,\n");
         drl.append("            \"").append(request.getName()).append("\",\n");
         drl.append("            \"").append(request.getSeverity()).append("\",\n");
-        drl.append("            ").append(thresholdValue).append(",\n");
-        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
+
+        // For string metrics, use 0.0 as threshold
+        if ("String".equals(javaType)) {
+            drl.append("            0.0,\n");
+            drl.append("            0.0\n");
+        } else {
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            String castExpression = getCastExpression(metricPath, javaType);
+            drl.append("            ").append(thresholdValue).append(",\n");
+            drl.append("            ").append(castExpression).append("\n");
+        }
+
         drl.append("        );\n");
         drl.append("end\n");
 
         return drl.toString();
     }
 
+
+
+//    private String generateThresholdDrl(UpdateRuleRequest request) {
+//        Map<String, Object> config = request.getRuleConfig();
+//
+//        String metricType = config.get("metricType").toString();
+//        String condition = config.get("condition").toString();
+//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
+//
+//        String metricPath = getMetricPath(metricType);
+//        String operator = Condition.valueOf(condition).getOperator();
+//
+//        StringBuilder drl = new StringBuilder();
+//        drl.append("package com.eventara.rules\n\n");
+//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+//
+//        drl.append("rule \"").append(request.getName()).append("\"\n");
+//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
+//        drl.append("    when\n");
+//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
+//        drl.append("        $handler: AlertTriggerHandler()\n");
+//        drl.append("    then\n");
+//        drl.append("        $handler.handleThresholdAlert(\n");
+//        drl.append("            null,\n");
+//        drl.append("            \"").append(request.getName()).append("\",\n");
+//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
+//        drl.append("            ").append(thresholdValue).append(",\n");
+//        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
+//        drl.append("        );\n");
+//        drl.append("end\n");
+//
+//        return drl.toString();
+//    }
+
+    private String generateThresholdDrl(UpdateRuleRequest request) {
+        Map<String, Object> config = request.getRuleConfig();
+
+        String metricType = config.get("metricType").toString();
+        String condition = config.get("condition").toString();
+        Object thresholdValueObj = config.get("thresholdValue");
+
+        String metricPath = getMetricPath(metricType);
+        String operator = Condition.valueOf(condition).getOperator();
+        String javaType = getMetricJavaType(metricType);
+
+        StringBuilder drl = new StringBuilder();
+        drl.append("package com.eventara.rules\n\n");
+        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+
+        drl.append("rule \"").append(request.getName()).append("\"\n");
+        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
+        drl.append("    when\n");
+
+        // Build condition based on type
+        if ("String".equals(javaType)) {
+            // String comparison
+            String thresholdValue = thresholdValueObj.toString();
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" \"")
+                    .append(thresholdValue)
+                    .append("\")\n");
+        } else {
+            // Numeric comparison
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" ")
+                    .append(thresholdValue)
+                    .append(")\n");
+        }
+
+        drl.append("        $handler: AlertTriggerHandler()\n");
+        drl.append("    then\n");
+        drl.append("        $handler.handleThresholdAlert(\n");
+        drl.append("            null,\n");
+        drl.append("            \"").append(request.getName()).append("\",\n");
+        drl.append("            \"").append(request.getSeverity()).append("\",\n");
+
+        // For string metrics, use 0.0 as threshold
+        if ("String".equals(javaType)) {
+            drl.append("            0.0,\n");
+            drl.append("            0.0\n");
+        } else {
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            String castExpression = getCastExpression(metricPath, javaType);
+            drl.append("            ").append(thresholdValue).append(",\n");
+            drl.append("            ").append(castExpression).append("\n");
+        }
+
+        drl.append("        );\n");
+        drl.append("end\n");
+
+        return drl.toString();
+    }
+
+
+//    private String generateThresholdDrl(TestRuleRequest request) {
+//        Map<String, Object> config = request.getRuleConfig();
+//
+//        String metricType = config.get("metricType").toString();
+//        String condition = config.get("condition").toString();
+//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
+//
+//        String metricPath = getMetricPath(metricType);
+//        String operator = Condition.valueOf(condition).getOperator();
+//
+//        StringBuilder drl = new StringBuilder();
+//        drl.append("package com.eventara.rules\n\n");
+//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+//
+//        String ruleName = request.getName() != null ? request.getName() : "TestRule";
+//
+//        drl.append("rule \"").append(ruleName).append("\"\n");
+//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
+//        drl.append("    when\n");
+//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
+//        drl.append("        $handler: AlertTriggerHandler()\n");
+//        drl.append("    then\n");
+//        drl.append("        $handler.handleThresholdAlert(\n");
+//        drl.append("            null,\n");
+//        drl.append("            \"").append(ruleName).append("\",\n");
+//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
+//        drl.append("            ").append(thresholdValue).append(",\n");
+//        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
+//        drl.append("        );\n");
+//        drl.append("end\n");
+//
+//        return drl.toString();
+//    }
+
     private String generateThresholdDrl(TestRuleRequest request) {
         Map<String, Object> config = request.getRuleConfig();
 
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
-        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
+        Object thresholdValueObj = config.get("thresholdValue");
 
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
+        String javaType = getMetricJavaType(metricType);
 
         StringBuilder drl = new StringBuilder();
         drl.append("package com.eventara.rules\n\n");
@@ -151,20 +385,54 @@ public class DrlGeneratorService {
         drl.append("rule \"").append(ruleName).append("\"\n");
         drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
         drl.append("    when\n");
-        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
+
+        // Build condition based on type
+        if ("String".equals(javaType)) {
+            // String comparison
+            String thresholdValue = thresholdValueObj.toString();
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" \"")
+                    .append(thresholdValue)
+                    .append("\")\n");
+        } else {
+            // Numeric comparison
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            drl.append("        $metrics: MetricsFact(")
+                    .append(metricPath)
+                    .append(" ")
+                    .append(operator)
+                    .append(" ")
+                    .append(thresholdValue)
+                    .append(")\n");
+        }
+
         drl.append("        $handler: AlertTriggerHandler()\n");
         drl.append("    then\n");
         drl.append("        $handler.handleThresholdAlert(\n");
         drl.append("            null,\n");
         drl.append("            \"").append(ruleName).append("\",\n");
         drl.append("            \"").append(request.getSeverity()).append("\",\n");
-        drl.append("            ").append(thresholdValue).append(",\n");
-        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
+
+        // For string metrics, use 0.0 as threshold
+        if ("String".equals(javaType)) {
+            drl.append("            0.0,\n");
+            drl.append("            0.0\n");
+        } else {
+            Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
+            String castExpression = getCastExpression(metricPath, javaType);
+            drl.append("            ").append(thresholdValue).append(",\n");
+            drl.append("            ").append(castExpression).append("\n");
+        }
+
         drl.append("        );\n");
         drl.append("end\n");
 
         return drl.toString();
     }
+
 
     private String generatePatternDrl(CreateRuleRequest request) {
         return "// Pattern rule DRL generation not yet implemented";
