@@ -1,8 +1,8 @@
 package com.eventara.rule.service;
 
 import com.eventara.rule.dto.request.CreateRuleRequest;
-import com.eventara.rule.dto.request.TestRuleRequest;
 import com.eventara.rule.dto.request.UpdateRuleRequest;
+import com.eventara.rule.dto.request.TestRuleRequest;
 import com.eventara.rule.enums.Condition;
 import com.eventara.rule.enums.MetricType;
 import com.eventara.rule.exception.InvalidRuleException;
@@ -64,8 +64,9 @@ public class RuleValidationService {
         }
 
         String metricTypeStr = config.get("metricType").toString();
+        MetricType metricType;
         try {
-            MetricType.valueOf(metricTypeStr);
+            metricType = MetricType.valueOf(metricTypeStr);
         } catch (IllegalArgumentException e) {
             throw new InvalidRuleException("Invalid metric type: " + metricTypeStr);
         }
@@ -87,13 +88,24 @@ public class RuleValidationService {
             throw new InvalidRuleException("thresholdValue is required in rule configuration");
         }
 
-        try {
-            Double.parseDouble(config.get("thresholdValue").toString());
-        } catch (NumberFormatException e) {
-            throw new InvalidRuleException("thresholdValue must be a valid number");
+        // Check if metric type is string-based
+        if (isStringMetricType(metricType)) {
+            // For string metrics, thresholdValue can be a string
+            String thresholdValue = config.get("thresholdValue").toString();
+            if (thresholdValue == null || thresholdValue.trim().isEmpty()) {
+                throw new InvalidRuleException("thresholdValue cannot be empty for string metrics");
+            }
+            log.debug("String metric validated: {} = {}", metricType, thresholdValue);
+        } else {
+            // For numeric metrics, validate as number
+            try {
+                Double.parseDouble(config.get("thresholdValue").toString());
+            } catch (NumberFormatException e) {
+                throw new InvalidRuleException("thresholdValue must be a valid number");
+            }
         }
 
-        // Validate time window
+        // Validate time window if present
         if (config.containsKey("timeWindowMinutes")) {
             try {
                 int timeWindow = Integer.parseInt(config.get("timeWindowMinutes").toString());
@@ -106,5 +118,17 @@ public class RuleValidationService {
         }
 
         log.debug("Rule configuration validated successfully");
+    }
+
+    /**
+     * Check if metric type is string-based
+     */
+    private boolean isStringMetricType(MetricType metricType) {
+        switch (metricType) {
+            case SYSTEM_HEALTH:
+                return true;
+            default:
+                return false;
+        }
     }
 }

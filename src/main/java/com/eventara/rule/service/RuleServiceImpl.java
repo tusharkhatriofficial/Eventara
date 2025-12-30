@@ -80,11 +80,67 @@ public class RuleServiceImpl implements RuleService {
         return mapToResponse(saved);
     }
 
+//    @Override
+//    public RuleResponse updateRule(Long id, UpdateRuleRequest request) {
+//        log.info("Updating rule with ID: {}", id);
+//
+//        AlertRule rule = getAlertRuleEntity(id);
+//
+//        // Check if name is being changed and if it conflicts
+//        if (request.getName() != null && !request.getName().equals(rule.getName())) {
+//            if (ruleRepository.existsByName(request.getName())) {
+//                throw new InvalidRuleException("Rule with name '" + request.getName() + "' already exists");
+//            }
+//            rule.setName(request.getName());
+//        }
+//
+//        // Update fields
+//        if (request.getDescription() != null) {
+//            rule.setDescription(request.getDescription());
+//        }
+//
+//        if (request.getRuleConfig() != null) {
+//            validationService.validateRuleConfig(request);
+//            rule.setRuleConfig(request.getRuleConfig());
+//
+//            // Regenerate DRL
+//            String newDrl = drlGeneratorService.generateDrl(request);
+//            compilerService.compileDrl(newDrl);
+//
+//            rule.setGeneratedDrl(newDrl);
+//            rule.setDrlHash(calculateHash(newDrl));
+//            rule.setVersion(rule.getVersion() + 1);
+//        }
+//
+//        if (request.getSeverity() != null) {
+//            rule.setSeverity(request.getSeverity());
+//        }
+//
+//        if (request.getPriority() != null) {
+//            rule.setPriority(request.getPriority());
+//        }
+//
+//        if (request.getNotificationChannels() != null) {
+//            rule.setNotificationChannels(request.getNotificationChannels());
+//        }
+//
+//        if (request.getNotificationConfig() != null) {
+//            rule.setNotificationConfig(request.getNotificationConfig());
+//        }
+//
+//        AlertRule updated = ruleRepository.save(rule);
+//        log.info("Rule updated successfully: {}", id);
+//
+//        return mapToResponse(updated);
+//    }
+
+
     @Override
     public RuleResponse updateRule(Long id, UpdateRuleRequest request) {
         log.info("Updating rule with ID: {}", id);
 
         AlertRule rule = getAlertRuleEntity(id);
+        boolean needsRegeneration = false;
 
         // Check if name is being changed and if it conflicts
         if (request.getName() != null && !request.getName().equals(rule.getName())) {
@@ -92,19 +148,48 @@ public class RuleServiceImpl implements RuleService {
                 throw new InvalidRuleException("Rule with name '" + request.getName() + "' already exists");
             }
             rule.setName(request.getName());
+            needsRegeneration = true;  // Name change needs DRL regen
         }
 
-        // Update fields
+        // Update description (no DRL regen needed)
         if (request.getDescription() != null) {
             rule.setDescription(request.getDescription());
         }
 
-        if (request.getRuleConfig() != null) {
-            validationService.validateRuleConfig(request);
-            rule.setRuleConfig(request.getRuleConfig());
+        // Update severity (needs DRL regen)
+        if (request.getSeverity() != null) {
+            rule.setSeverity(request.getSeverity());
+            needsRegeneration = true;
+        }
 
-            // Regenerate DRL
-            String newDrl = drlGeneratorService.generateDrl(request);
+        // Update priority (needs DRL regen)
+        if (request.getPriority() != null) {
+            rule.setPriority(request.getPriority());
+            needsRegeneration = true;
+        }
+
+        // Update rule config (needs DRL regen)
+        if (request.getRuleConfig() != null) {
+            rule.setRuleConfig(request.getRuleConfig());
+            needsRegeneration = true;
+        }
+
+        // Regenerate DRL only if needed
+        if (needsRegeneration) {
+            // Build complete UpdateRuleRequest with all required fields
+            UpdateRuleRequest completeRequest = UpdateRuleRequest.builder()
+                    .name(rule.getName())
+                    .ruleType(rule.getRuleType())  // From existing rule
+                    .ruleConfig(rule.getRuleConfig())
+                    .severity(rule.getSeverity())
+                    .priority(rule.getPriority())
+                    .build();
+
+            // Validate
+            validationService.validateRuleConfig(completeRequest);
+
+            // Generate new DRL
+            String newDrl = drlGeneratorService.generateDrl(completeRequest);
             compilerService.compileDrl(newDrl);
 
             rule.setGeneratedDrl(newDrl);
@@ -112,14 +197,7 @@ public class RuleServiceImpl implements RuleService {
             rule.setVersion(rule.getVersion() + 1);
         }
 
-        if (request.getSeverity() != null) {
-            rule.setSeverity(request.getSeverity());
-        }
-
-        if (request.getPriority() != null) {
-            rule.setPriority(request.getPriority());
-        }
-
+        // Update notification settings (no DRL regen needed)
         if (request.getNotificationChannels() != null) {
             rule.setNotificationChannels(request.getNotificationChannels());
         }
@@ -133,6 +211,7 @@ public class RuleServiceImpl implements RuleService {
 
         return mapToResponse(updated);
     }
+
 
     @Override
     public void deleteRule(Long id) {
