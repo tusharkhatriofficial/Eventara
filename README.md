@@ -7,6 +7,8 @@
     <!-- Fallback / Default Image (REQUIRED) -->
     <img alt="Eventara Logo" src="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6" width="500">
   </picture>
+  
+  # See it before your users do
 </div>
 
 
