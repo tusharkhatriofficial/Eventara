@@ -174,7 +174,7 @@ public class DrlGeneratorService {
         drl.append("package com.eventara.rules\n\n");
         drl.append("import com.eventara.drools.fact.MetricsFact\n");
         drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-
+        drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
         drl.append("rule \"").append(request.getName()).append("\"\n");
         drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
         drl.append("    when\n");
