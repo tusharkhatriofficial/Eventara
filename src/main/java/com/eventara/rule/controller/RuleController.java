@@ -192,4 +192,25 @@ public class RuleController {
         private Long totalRules;
         private Long activeRules;
     }
+
+    /**
+     * Regenerate DRL for all existing rules (maintenance endpoint)
+     * POST /api/v1/rules/regenerate-drls
+     */
+    @PostMapping("/regenerate-drls")
+    public ResponseEntity<RegenerateDrlsResponse> regenerateAllDrls() {
+        log.info("Regenerating DRL for all rules");
+        int count = ruleService.regenerateAllDrls();
+        return ResponseEntity.ok(RegenerateDrlsResponse.builder()
+                .message("DRL regenerated successfully")
+                .rulesUpdated(count)
+                .build());
+    }
+
+    @lombok.Data
+    @lombok.Builder
+    public static class RegenerateDrlsResponse {
+        private String message;
+        private int rulesUpdated;
+    }
 }

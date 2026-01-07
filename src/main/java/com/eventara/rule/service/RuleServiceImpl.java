@@ -47,7 +47,7 @@ public class RuleServiceImpl implements RuleService {
         // Validate rule configuration
         validationService.validateRuleConfig(request);
 
-        // Generate DRL
+        // Generate initial DRL (without ruleId for validation)
         String drl = drlGeneratorService.generateDrl(request);
 
         // Compile and validate DRL
@@ -78,6 +78,14 @@ public class RuleServiceImpl implements RuleService {
 
         AlertRule saved = ruleRepository.save(rule);
         log.info("Rule created successfully with ID: {}", saved.getId());
+
+        // Regenerate DRL with actual ruleId for proper alert tracking
+        String finalDrl = drlGeneratorService.generateDrl(request, saved.getId());
+        String finalDrlHash = calculateHash(finalDrl);
+        saved.setGeneratedDrl(finalDrl);
+        saved.setDrlHash(finalDrlHash);
+        saved = ruleRepository.save(saved);
+        log.info("Rule DRL updated with ruleId: {}", saved.getId());
 
         // Rules start as DRAFT, so no need to load into execution engine yet.
         // If you ever allow creating as ACTIVE directly, uncomment this:
@@ -148,8 +156,8 @@ public class RuleServiceImpl implements RuleService {
             // Validate
             validationService.validateRuleConfig(completeRequest);
 
-            // Generate new DRL
-            String newDrl = drlGeneratorService.generateDrl(completeRequest);
+            // Generate new DRL with ruleId
+            String newDrl = drlGeneratorService.generateDrl(completeRequest, rule.getId());
             compilerService.compileDrl(newDrl);
 
             rule.setGeneratedDrl(newDrl);
@@ -436,6 +444,52 @@ public class RuleServiceImpl implements RuleService {
             log.error("Error calculating hash", e);
             return null;
         }
+    }
+
+    /**
+     * Regenerate DRL for all existing rules to include ruleId.
+     * Use this after updating DRL generation logic.
+     */
+    @Override
+    public int regenerateAllDrls() {
+        log.info("Regenerating DRL for all rules...");
+        List<AlertRule> allRules = ruleRepository.findAll();
+        int count = 0;
+
+        for (AlertRule rule : allRules) {
+            try {
+                // Build request from existing rule
+                CreateRuleRequest request = CreateRuleRequest.builder()
+                        .name(rule.getName())
+                        .ruleType(rule.getRuleType())
+                        .ruleConfig(rule.getRuleConfig())
+                        .severity(rule.getSeverity())
+                        .priority(rule.getPriority())
+                        .build();
+
+                // Generate new DRL with ruleId
+                String newDrl = drlGeneratorService.generateDrl(request, rule.getId());
+
+                // Validate
+                compilerService.compileDrl(newDrl);
+
+                // Update
+                rule.setGeneratedDrl(newDrl);
+                rule.setDrlHash(calculateHash(newDrl));
+                ruleRepository.save(rule);
+
+                count++;
+                log.info("Regenerated DRL for rule: {} (ID: {})", rule.getName(), rule.getId());
+            } catch (Exception e) {
+                log.error("Failed to regenerate DRL for rule: {} (ID: {})", rule.getName(), rule.getId(), e);
+            }
+        }
+
+        // Reload all rules in execution engine
+        ruleExecutionService.loadAllActiveRules();
+
+        log.info("Regenerated DRL for {} rules", count);
+        return count;
     }
 }
 

@@ -15,11 +15,15 @@ import java.util.Map;
 public class DrlGeneratorService {
 
     public String generateDrl(CreateRuleRequest request) {
+        return generateDrl(request, null);  // Default without ruleId for initial validation
+    }
+
+    public String generateDrl(CreateRuleRequest request, Long ruleId) {
         log.info("Generating DRL for rule: {}", request.getName());
 
         switch (request.getRuleType()) {
             case THRESHOLD:
-                return generateThresholdDrl(request);
+                return generateThresholdDrl(request, ruleId);
             case PATTERN:
                 return generatePatternDrl(request);
             case ANOMALY:
@@ -32,11 +36,15 @@ public class DrlGeneratorService {
     }
 
     public String generateDrl(UpdateRuleRequest request) {
+        return generateDrl(request, null);  // Default without ruleId
+    }
+
+    public String generateDrl(UpdateRuleRequest request, Long ruleId) {
         log.info("Generating DRL for rule update");
 
         switch (request.getRuleType()) {
             case THRESHOLD:
-                return generateThresholdDrl(request);
+                return generateThresholdDrl(request, ruleId);
             case PATTERN:
                 return generatePatternDrl(request);
             case ANOMALY:
@@ -159,7 +167,7 @@ public class DrlGeneratorService {
 //        return drl.toString();
 //    }
 
-    private String generateThresholdDrl(CreateRuleRequest request) {
+    private String generateThresholdDrl(CreateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
 
         String metricType = config.get("metricType").toString();
@@ -205,7 +213,7 @@ public class DrlGeneratorService {
         drl.append("        $handler: AlertTriggerHandler()\n");
         drl.append("    then\n");
         drl.append("        $handler.handleThresholdAlert(\n");
-        drl.append("            null,\n");
+        drl.append("            ").append(ruleId != null ? ruleId + "L" : "null").append(",\n");
         drl.append("            \"").append(request.getName()).append("\",\n");
         drl.append("            \"").append(request.getSeverity()).append("\",\n");
 
@@ -261,7 +269,7 @@ public class DrlGeneratorService {
 //        return drl.toString();
 //    }
 
-    private String generateThresholdDrl(UpdateRuleRequest request) {
+    private String generateThresholdDrl(UpdateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
 
         String metricType = config.get("metricType").toString();
@@ -276,6 +284,7 @@ public class DrlGeneratorService {
         drl.append("package com.eventara.rules\n\n");
         drl.append("import com.eventara.drools.fact.MetricsFact\n");
         drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+        drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
 
         drl.append("rule \"").append(request.getName()).append("\"\n");
         drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
@@ -307,7 +316,7 @@ public class DrlGeneratorService {
         drl.append("        $handler: AlertTriggerHandler()\n");
         drl.append("    then\n");
         drl.append("        $handler.handleThresholdAlert(\n");
-        drl.append("            null,\n");
+        drl.append("            ").append(ruleId != null ? ruleId + "L" : "null").append(",\n");
         drl.append("            \"").append(request.getName()).append("\",\n");
         drl.append("            \"").append(request.getSeverity()).append("\",\n");
 
