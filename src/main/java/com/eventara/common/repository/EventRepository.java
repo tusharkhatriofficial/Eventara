@@ -59,4 +59,59 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     //Check if event already exists (deduplication)
     boolean existsByEventId(String eventId);
 
+    // ===== METRICS CALCULATION QUERIES FOR DROOLS RULE EVALUATION =====
+
+    // Count events in time window
+    long countByTimestampBetween(Instant startTime, Instant endTime);
+
+    // Count errors (by severity) in time window
+    long countBySeverityAndTimestampBetween(Event.Severity severity, Instant startTime, Instant endTime);
+
+    // Count unique sources
+    @Query("SELECT COUNT(DISTINCT e.source) FROM Event e WHERE e.timestamp BETWEEN :startTime AND :endTime")
+    int countDistinctSourceByTimestampBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Count unique event types
+    @Query("SELECT COUNT(DISTINCT e.eventType) FROM Event e WHERE e.timestamp BETWEEN :startTime AND :endTime")
+    int countDistinctEventTypeByTimestampBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Count unique users
+    @Query("SELECT COUNT(DISTINCT e.userId) FROM Event e WHERE e.userId IS NOT NULL AND e.timestamp BETWEEN :startTime AND :endTime")
+    int countDistinctUserIdByTimestampBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Get distinct sources
+    @Query("SELECT DISTINCT e.source FROM Event e WHERE e.timestamp BETWEEN :startTime AND :endTime")
+    List<String> findDistinctSourcesByTimestampBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Count events by source in time window
+    long countBySourceAndTimestampBetween(String source, Instant startTime, Instant endTime);
+
+    // Count errors by source in time window
+    long countBySourceAndSeverityAndTimestampBetween(String source, Event.Severity severity, Instant startTime, Instant endTime);
+
+    // Average processing latency (receivedAt - timestamp) in milliseconds
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findAvgLatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Percentile latency queries (native SQL for TimescaleDB)
+    @Query(value = "SELECT PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findP50LatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    @Query(value = "SELECT PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findP95LatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    @Query(value = "SELECT PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findP99LatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Min/Max latency
+    @Query(value = "SELECT MIN(EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findMinLatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    @Query(value = "SELECT MAX(EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findMaxLatencyBetween(@Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
+    // Average latency by source
+    @Query(value = "SELECT AVG(EXTRACT(EPOCH FROM (received_at - timestamp)) * 1000) FROM events WHERE source = :source AND timestamp BETWEEN :startTime AND :endTime", nativeQuery = true)
+    Double findAvgLatencyBySourceBetween(@Param("source") String source, @Param("startTime") Instant startTime, @Param("endTime") Instant endTime);
+
 }

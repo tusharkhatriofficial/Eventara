@@ -48,4 +48,7 @@ public interface RuleService {
     List<AlertRule> getAllActiveRuleEntities();
     void updateLastTriggered(Long ruleId);
     void incrementTriggerCount(Long ruleId);
+
+    // Migration/Maintenance
+    int regenerateAllDrls();
 }
