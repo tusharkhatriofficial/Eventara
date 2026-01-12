@@ -26,17 +26,35 @@ export const AlertsAndAnomalies: React.FC<AlertsAndAnomaliesProps> = ({ metrics 
     <div className="space-y-6">
       {/* Page Title */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Alerts & Anomalies</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Real-time anomaly detection and system alert monitoring
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Alerts & Anomalies</h1>
+            <p className="text-sm text-gray-500 mt-1">Real-time anomaly detection and system alert monitoring</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <a href="/alerts" className="text-sm px-3 py-1 rounded hover:bg-gray-100">Overview</a>
+            <a href="/alerts/rules" className="text-sm px-3 py-1 rounded bg-blue-600 text-white">Rules</a>
+            <a href="/settings/notifications" className="text-sm px-3 py-1 rounded hover:bg-gray-100">Notifications</a>
+          </div>
+        </div>
       </div>
 
       {/* Overview Cards */}
       <AlertOverviewCards anomalies={metrics.anomalies} />
 
       {/* Coming Soon Banner */}
-      <ComingSoonBanner />
+      <div className="mt-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-6 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">Custom alert rules</h3>
+            <p className="text-sm text-gray-500">Create rules to automatically detect anomalies and notify your team.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="/alerts/rules" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Manage rules</a>
+            <a href="/alerts/rules/new" className="px-3 py-2 bg-white border rounded">Create a rule</a>
+          </div>
+        </div>
+      </div>
 
       {/* Active Alerts Panel */}
       <ActiveAlertsPanel anomalies={metrics.anomalies} />

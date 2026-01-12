@@ -12,6 +12,10 @@ import { UserAnalytics } from './pages/UserAnalytics';
 import { PerformanceMetrics } from './pages/PerformanceMetrics';
 import { ErrorAnalysis } from './pages/ErrorAnalysis';
 import { AlertsAndAnomalies } from './pages/AlertsAndAnomalies';
+import { RulesList } from './pages/RulesList';
+import { RuleEditor } from './pages/RuleEditor';
+import { RuleDetails } from './pages/RuleDetails';
+import { SettingsNotifications } from './pages/SettingsNotifications';
 
 function App() {
   const { metrics, connectionState, reconnect } = useWebSocketMetrics();
@@ -35,6 +39,11 @@ function App() {
           <Route path="/performance" element={<PerformanceMetrics metrics={metrics} />} />
           <Route path="/errors" element={<ErrorAnalysis metrics={metrics} />} />
           <Route path="/alerts" element={<AlertsAndAnomalies metrics={metrics} />} />
+          <Route path="/alerts/rules" element={<RulesList />} />
+          <Route path="/alerts/rules/new" element={<RuleEditor />} />
+          <Route path="/alerts/rules/:id" element={<RuleDetails />} />
+          <Route path="/alerts/rules/:id/edit" element={<RuleEditor />} />
+          <Route path="/settings/notifications" element={<SettingsNotifications />} />
           <Route path="/reports" element={<ComingSoon pageName="Reports" />} />
         </Route>
       </Routes>
