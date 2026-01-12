@@ -10,8 +10,8 @@ export const Header: React.FC<HeaderProps> = ({ connectionState, onReconnect }) 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
-        {/* Left side - can add breadcrumbs or search later */}
-        <div className="flex-1">
+        {/* Left side - main nav */}
+        <div className="flex-1 flex items-center gap-6">
           <div className="text-sm text-gray-500">
             {new Date().toLocaleDateString('en-US', { 
               weekday: 'long',
@@ -20,6 +20,10 @@ export const Header: React.FC<HeaderProps> = ({ connectionState, onReconnect }) 
               day: 'numeric' 
             })}
           </div>
+          <nav className="hidden md:flex items-center gap-4">
+            <a href="/" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
+            <a href="/alerts" className="text-sm font-medium text-blue-600 hover:underline">Alerts</a>
+          </nav>
         </div>
 
         {/* Right side - Connection status and actions */}
