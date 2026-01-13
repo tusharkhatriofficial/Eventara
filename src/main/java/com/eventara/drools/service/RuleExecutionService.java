@@ -1,6 +1,7 @@
 package com.eventara.drools.service;
 
 import com.eventara.alert.service.AlertTriggerHandler;
+import com.eventara.analytics.service.MetricsCalculator;
 import com.eventara.drools.fact.MetricsFact;
 import com.eventara.rule.entity.AlertRule;
 import com.eventara.rule.enums.RuleStatus;
@@ -13,12 +14,17 @@ import org.kie.api.builder.KieFileSystem;
 import org.kie.api.builder.Message;
 import org.kie.api.runtime.KieContainer;
 import org.kie.api.runtime.KieSession;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
 
 @Service
 @Slf4j
@@ -27,16 +33,35 @@ public class RuleExecutionService {
 
     private final RuleRepository ruleRepository;
     private final AlertTriggerHandler alertTriggerHandler;
+    private final MetricsCalculator metricsCalculator;
 
     private KieServices kieServices;
     private KieContainer kieContainer;
     private final ConcurrentHashMap<String, String> loadedRuleHashes = new ConcurrentHashMap<>();
+    private ScheduledExecutorService scheduler;
+    private final Map<Integer, List<AlertRule>> ruleGroups = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
         log.info("Initializing Rule Execution Service");
         this.kieServices = KieServices.Factory.get();
+        this.scheduler = Executors.newScheduledThreadPool(10);
         loadAllActiveRules();
+        scheduleRuleGroups();
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        if (scheduler != null) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+            }
+        }
     }
 
     /**
@@ -71,6 +96,91 @@ public class RuleExecutionService {
 
         kieContainer = kieServices.newKieContainer(kieServices.getRepository().getDefaultReleaseId());
         log.info("Successfully loaded {} active rules", activeRules.size());
+
+        // Group rules by timeWindowMinutes
+        ruleGroups.clear();
+        for (AlertRule rule : activeRules) {
+            int twm = getTimeWindowMinutes(rule);
+            ruleGroups.computeIfAbsent(twm, k -> new ArrayList<>()).add(rule);
+        }
+    }
+
+    private int getTimeWindowMinutes(AlertRule rule) {
+        Map<String, Object> config = rule.getRuleConfig();
+        if (config != null && config.containsKey("timeWindowMinutes")) {
+            try {
+                return Integer.parseInt(config.get("timeWindowMinutes").toString());
+            } catch (NumberFormatException e) {
+                log.warn("Invalid timeWindowMinutes for rule {}, defaulting to 5", rule.getName());
+            }
+        }
+        return 5; // Default to 5 minutes
+    }
+
+    private void scheduleRuleGroups() {
+        log.info("Scheduling rule evaluation groups");
+
+        // Shutdown existing scheduler
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+            }
+        }
+
+        // Create new scheduler
+        scheduler = Executors.newScheduledThreadPool(Math.max(1, ruleGroups.size()));
+
+        long currentTimeMillis = System.currentTimeMillis();
+        long currentMinute = currentTimeMillis / 60000;
+
+        for (Map.Entry<Integer, List<AlertRule>> entry : ruleGroups.entrySet()) {
+            int twm = entry.getKey();
+            List<AlertRule> rules = entry.getValue();
+
+            // Calculate initial delay to align with clock
+            long delayMinutes = twm - (currentMinute % twm);
+            if (delayMinutes == twm) delayMinutes = 0;
+
+            log.info("Scheduling group for timeWindowMinutes={} with {} rules, initial delay={} minutes",
+                    twm, rules.size(), delayMinutes);
+
+            scheduler.scheduleAtFixedRate(() -> evaluateRuleGroup(rules, twm),
+                    delayMinutes, twm, TimeUnit.MINUTES);
+        }
+    }
+
+    private void evaluateRuleGroup(List<AlertRule> rules, int twm) {
+        log.debug("Evaluating rule group for timeWindowMinutes={}", twm);
+
+        try {
+            // Calculate metrics
+            MetricsFact metrics = metricsCalculator.calculateCurrentMetrics();
+
+            // Create KieSession and evaluate
+            KieSession kieSession = null;
+            try {
+                kieSession = kieContainer.newKieSession();
+                kieSession.setGlobal("alertHandler", alertTriggerHandler);
+                kieSession.insert(metrics);
+                kieSession.insert(alertTriggerHandler);
+
+                int rulesFired = kieSession.fireAllRules();
+                log.info("Evaluated {} rules for timeWindowMinutes={}, rules fired: {}", rules.size(), twm, rulesFired);
+
+            } finally {
+                if (kieSession != null) {
+                    kieSession.dispose();
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error evaluating rule group for timeWindowMinutes={}", twm, e);
+        }
     }
 
     /**
@@ -88,42 +198,7 @@ public class RuleExecutionService {
 
         // Reload all rules (simpler for now, can optimize later)
         loadAllActiveRules();
-    }
-
-    /**
-     * Execute all active rules against metrics
-     */
-    @Async
-    public void executeRules(MetricsFact metrics) {
-        if (kieContainer == null) {
-            log.warn("KIE container not initialized, loading rules");
-            loadAllActiveRules();
-            if (kieContainer == null) {
-                log.error("Failed to initialize KIE container");
-                return;
-            }
-        }
-
-        KieSession kieSession = null;
-        try {
-            kieSession = kieContainer.newKieSession();
-
-            // Insert facts
-            kieSession.setGlobal("alertHandler", alertTriggerHandler);
-            kieSession.insert(metrics);
-            kieSession.insert(alertTriggerHandler);
-
-            // Fire all rules
-            int rulesFired = kieSession.fireAllRules();
-            log.info("Executed rules against metrics. Rules fired: {}", rulesFired);
-
-        } catch (Exception e) {
-            log.error("Error executing rules", e);
-        } finally {
-            if (kieSession != null) {
-                kieSession.dispose();
-            }
-        }
+        scheduleRuleGroups();
     }
 
     /**
@@ -170,5 +245,6 @@ public class RuleExecutionService {
         log.info("Unloading rule: {}", ruleName);
         loadedRuleHashes.remove(ruleName);
         loadAllActiveRules();
+        scheduleRuleGroups();
     }
 }
