@@ -178,6 +178,13 @@ public class DrlGeneratorService {
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
 
+        // Build time condition if timeWindowMinutes is present
+        String timeCondition = "";
+        if (config.containsKey("timeWindowMinutes")) {
+            int twm = Integer.parseInt(config.get("timeWindowMinutes").toString());
+            timeCondition = "(currentTimeSeconds / 60) % " + twm + " == 0, ";
+        }
+
         StringBuilder drl = new StringBuilder();
         drl.append("package com.eventara.rules\n\n");
         drl.append("import com.eventara.drools.fact.MetricsFact\n");
@@ -192,6 +199,7 @@ public class DrlGeneratorService {
             // String comparison
             String thresholdValue = thresholdValueObj.toString();
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)
@@ -202,6 +210,7 @@ public class DrlGeneratorService {
             // Numeric comparison
             Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)
@@ -234,40 +243,6 @@ public class DrlGeneratorService {
         return drl.toString();
     }
 
-
-
-//    private String generateThresholdDrl(UpdateRuleRequest request) {
-//        Map<String, Object> config = request.getRuleConfig();
-//
-//        String metricType = config.get("metricType").toString();
-//        String condition = config.get("condition").toString();
-//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
-//
-//        String metricPath = getMetricPath(metricType);
-//        String operator = Condition.valueOf(condition).getOperator();
-//
-//        StringBuilder drl = new StringBuilder();
-//        drl.append("package com.eventara.rules\n\n");
-//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
-//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-//
-//        drl.append("rule \"").append(request.getName()).append("\"\n");
-//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-//        drl.append("    when\n");
-//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
-//        drl.append("        $handler: AlertTriggerHandler()\n");
-//        drl.append("    then\n");
-//        drl.append("        $handler.handleThresholdAlert(\n");
-//        drl.append("            null,\n");
-//        drl.append("            \"").append(request.getName()).append("\",\n");
-//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
-//        drl.append("            ").append(thresholdValue).append(",\n");
-//        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
-//        drl.append("        );\n");
-//        drl.append("end\n");
-//
-//        return drl.toString();
-//    }
 
     private String generateThresholdDrl(UpdateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
@@ -280,6 +255,13 @@ public class DrlGeneratorService {
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
 
+        // Build time condition if timeWindowMinutes is present
+        String timeCondition = "";
+        if (config.containsKey("timeWindowMinutes")) {
+            int twm = Integer.parseInt(config.get("timeWindowMinutes").toString());
+            timeCondition = "(currentTimeSeconds / 60) % " + twm + " == 0, ";
+        }
+
         StringBuilder drl = new StringBuilder();
         drl.append("package com.eventara.rules\n\n");
         drl.append("import com.eventara.drools.fact.MetricsFact\n");
@@ -295,6 +277,7 @@ public class DrlGeneratorService {
             // String comparison
             String thresholdValue = thresholdValueObj.toString();
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)
@@ -305,6 +288,7 @@ public class DrlGeneratorService {
             // Numeric comparison
             Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)
@@ -337,42 +321,6 @@ public class DrlGeneratorService {
         return drl.toString();
     }
 
-
-//    private String generateThresholdDrl(TestRuleRequest request) {
-//        Map<String, Object> config = request.getRuleConfig();
-//
-//        String metricType = config.get("metricType").toString();
-//        String condition = config.get("condition").toString();
-//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
-//
-//        String metricPath = getMetricPath(metricType);
-//        String operator = Condition.valueOf(condition).getOperator();
-//
-//        StringBuilder drl = new StringBuilder();
-//        drl.append("package com.eventara.rules\n\n");
-//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
-//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-//
-//        String ruleName = request.getName() != null ? request.getName() : "TestRule";
-//
-//        drl.append("rule \"").append(ruleName).append("\"\n");
-//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-//        drl.append("    when\n");
-//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
-//        drl.append("        $handler: AlertTriggerHandler()\n");
-//        drl.append("    then\n");
-//        drl.append("        $handler.handleThresholdAlert(\n");
-//        drl.append("            null,\n");
-//        drl.append("            \"").append(ruleName).append("\",\n");
-//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
-//        drl.append("            ").append(thresholdValue).append(",\n");
-//        drl.append("            $metrics.").append(getGetterMethod(metricPath)).append("()\n");
-//        drl.append("        );\n");
-//        drl.append("end\n");
-//
-//        return drl.toString();
-//    }
-
     private String generateThresholdDrl(TestRuleRequest request) {
         Map<String, Object> config = request.getRuleConfig();
 
@@ -383,6 +331,13 @@ public class DrlGeneratorService {
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
+
+        // Build time condition if timeWindowMinutes is present
+        String timeCondition = "";
+        if (config.containsKey("timeWindowMinutes")) {
+            int twm = Integer.parseInt(config.get("timeWindowMinutes").toString());
+            timeCondition = "(currentTimeSeconds / 60) % " + twm + " == 0, ";
+        }
 
         StringBuilder drl = new StringBuilder();
         drl.append("package com.eventara.rules\n\n");
@@ -400,6 +355,7 @@ public class DrlGeneratorService {
             // String comparison
             String thresholdValue = thresholdValueObj.toString();
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)
@@ -410,6 +366,7 @@ public class DrlGeneratorService {
             // Numeric comparison
             Double thresholdValue = Double.parseDouble(thresholdValueObj.toString());
             drl.append("        $metrics: MetricsFact(")
+                    .append(timeCondition)
                     .append(metricPath)
                     .append(" ")
                     .append(operator)

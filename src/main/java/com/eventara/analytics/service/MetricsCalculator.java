@@ -142,6 +142,7 @@ public class MetricsCalculator {
 
                 // Metadata
                 .timestamp(now)
+                .currentTimeSeconds(System.currentTimeMillis() / 1000)
                 .build();
 
         log.debug("Calculated metrics from DB: totalEvents={}, errorRate={}%, systemHealth={}, sources={}",

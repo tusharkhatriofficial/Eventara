@@ -67,6 +67,7 @@ public class MetricsFact implements Serializable {
 
     // ===== METADATA =====
     private Instant timestamp;
+    private long currentTimeSeconds;
 }
 
 
