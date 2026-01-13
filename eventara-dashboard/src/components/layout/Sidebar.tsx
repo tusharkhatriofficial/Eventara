@@ -27,27 +27,38 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-64 bg-gray-900 min-h-screen flex flex-col">
+    <aside className="w-72 bg-gradient-to-b from-dark-900 via-dark-800 to-dark-900 min-h-screen flex flex-col shadow-2xl">
       {/* Logo */}
-      <div className="p-6 border-b border-gray-800">
-        <h1 className="text-xl font-bold text-white">Eventara</h1>
-        <p className="text-xs text-gray-400 mt-1">Event Analytics Platform</p>
+      <div className="p-8 border-b border-dark-700/50">
+        <div className="flex items-center gap-3">
+          {/* <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div> */}
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Eventara</h1>
+            <p className="text-xs text-dark-400 mt-0.5">Event analytics and intelligent alerting platform</p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto scrollbar-thin">
         {navigationItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+            className={`group flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 ${
               isActive(item.path)
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-500/30'
+                : 'text-dark-300 hover:bg-dark-700/50 hover:text-white'
             }`}
           >
             <svg
-              className="w-5 h-5"
+              className={`w-5 h-5 transition-transform duration-200 ${
+                isActive(item.path) ? '' : 'group-hover:scale-110'
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -65,10 +76,13 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="text-xs text-gray-500">
-          <p>Version 1.0.0</p>
-          <p className="mt-1">© 2025 Eventara</p>
+      <div className="p-6 border-t border-dark-700/50">
+        <div className="flex items-center gap-3 p-4 bg-dark-800/50 rounded-xl backdrop-blur-sm">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50"></div>
+          <div className="flex-1">
+            <p className="text-xs font-medium text-dark-300">System Online</p>
+            <p className="text-xs text-dark-500 mt-0.5">Version 1.0.0</p>
+          </div>
         </div>
       </div>
     </aside>

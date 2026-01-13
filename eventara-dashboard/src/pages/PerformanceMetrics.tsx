@@ -15,21 +15,32 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ metrics 
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading performance metrics...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center mb-4 shadow-lg shadow-purple-500/30 animate-pulse">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <p className="text-dark-600 font-medium">Loading performance metrics...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Performance Metrics</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Detailed latency analysis and performance optimization insights
-        </p>
+      <div className="card-gradient p-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">Performance Metrics</h1>
+            <p className="text-sm text-dark-600 mt-1">
+              Detailed latency analysis and performance optimization insights
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Performance Overview Cards */}
@@ -51,53 +62,61 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ metrics 
       <LatencyComparisonChart eventsByType={metrics.eventsByType} topN={10} />
 
       {/* Performance Summary */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Summary</h3>
+      <div className="card-gradient p-8">
+        <h3 className="text-2xl font-bold text-dark-900 mb-6 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          Performance Summary
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Latency Range</p>
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="stat-card">
+            <p className="text-sm font-semibold text-dark-600 mb-3">Latency Range</p>
+            <p className="text-3xl font-bold text-gradient">
               {metrics.performance.minLatency.toFixed(1)} - {metrics.performance.maxLatency.toFixed(1)} ms
             </p>
-            <p className="text-xs text-gray-500 mt-1">Min to Max</p>
+            <p className="text-xs text-dark-500 mt-2">Min to Max</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Latency Variance</p>
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="stat-card">
+            <p className="text-sm font-semibold text-dark-600 mb-3">Latency Variance</p>
+            <p className="text-3xl font-bold text-gradient">
               {(metrics.performance.maxLatency - metrics.performance.minLatency).toFixed(1)} ms
             </p>
-            <p className="text-xs text-gray-500 mt-1">Max - Min</p>
+            <p className="text-xs text-dark-500 mt-2">Max - Min</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600 mb-2">P95/P50 Ratio</p>
-            <p className="text-2xl font-bold text-gray-900">
+          <div className="stat-card">
+            <p className="text-sm font-semibold text-dark-600 mb-3">P95/P50 Ratio</p>
+            <p className="text-3xl font-bold text-gradient">
               {metrics.performance.p50 > 0 
                 ? (metrics.performance.p95 / metrics.performance.p50).toFixed(2) 
                 : 'N/A'}x
             </p>
-            <p className="text-xs text-gray-500 mt-1">Consistency indicator</p>
+            <p className="text-xs text-dark-500 mt-2">Consistency indicator</p>
           </div>
         </div>
       </div>
 
       {/* Key Metrics Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Detailed Metrics</h3>
+      <div className="card-gradient overflow-hidden">
+        <div className="p-8 border-b border-dark-100">
+          <h3 className="text-2xl font-bold text-dark-900 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            Detailed Metrics
+          </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="table-modern">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Metric
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Value
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <th>Metric</th>
+                <th>Value</th>
+                <th>Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Description
                 </th>
