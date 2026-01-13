@@ -45,8 +45,10 @@
     ·
     <a href="#roadmap">Roadmap</a>
   </p>
+  
+  <img width="1771" height="887" alt="1111" src="https://github.com/user-attachments/assets/31ef4920-588a-4da9-9219-a465ee19b06f" />
+  <img width="1771" height="887" alt="2222" src="https://github.com/user-attachments/assets/78612121-75ad-4cb4-83b7-03c4e03f6173" />
 
-  <img src="https://github.com/user-attachments/assets/423d92aa-7bc0-4f6a-90cf-8f6d5c22c71a" width="100%" alt="Eventara dashboard preview" />
 </div>
 
 ---
