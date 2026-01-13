@@ -14,8 +14,10 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading real-time data...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30 animate-pulse">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <p className="text-dark-600 font-medium">Loading real-time data...</p>
         </div>
       </div>
     );
@@ -31,13 +33,23 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
   const sources = Object.entries(metrics.eventsBySource);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Real-Time Monitoring</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Live system metrics updating every second
-        </p>
+      <div className="card-gradient p-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-pulse">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">Real-Time Monitoring</h1>
+            <p className="text-sm text-dark-600 mt-1 flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              Live system metrics updating every second
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Large Live Metrics Display */}

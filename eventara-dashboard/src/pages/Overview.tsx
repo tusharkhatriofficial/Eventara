@@ -16,8 +16,10 @@ export const Overview: React.FC<OverviewProps> = ({ metrics }) => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading metrics...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mb-4 shadow-lg shadow-primary-500/30 animate-pulse">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <p className="text-dark-600 font-medium">Loading metrics...</p>
         </div>
       </div>
     );
@@ -36,18 +38,23 @@ export const Overview: React.FC<OverviewProps> = ({ metrics }) => {
     .slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Real-time system health and key performance metrics
-        </p>
-      </div>
-
-      {/* System Health Badge */}
-      <div>
-        <SystemHealthBadge health={metrics.summary.systemHealth} />
+      <div className="card-gradient p-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-gradient">Dashboard Overview</h1>
+            <p className="text-sm text-dark-600 mt-1">
+              Real-time system health and key performance metrics
+            </p>
+          </div>
+          <SystemHealthBadge health={metrics.summary.systemHealth} />
+        </div>
       </div>
 
       {/* Hero Metrics - 4 Cards */}
@@ -113,41 +120,36 @@ export const Overview: React.FC<OverviewProps> = ({ metrics }) => {
       <EventsByTypeChart eventsByType={metrics.eventsByType} />
 
       {/* Top Event Types Table */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Event Types</h3>
+      <div className="card-gradient overflow-hidden">
+        <div className="p-8 border-b border-dark-100">
+          <h3 className="text-2xl font-bold text-dark-900 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            Top Event Types
+          </h3>
+        </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="table-modern">
             <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Event Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Count
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Percentage
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Avg Latency
-                </th>
+                <th>Event Type</th>
+                <th>Count</th>
+                <th>Percentage</th>
+                <th>Avg Latency</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {topEventTypes.map(([type, data]) => (
-                <tr key={type} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {type}
+                <tr key={type} className="hover:bg-dark-50/50 transition-colors">
+                  <td className="font-semibold text-dark-900">{type}</td>
+                  <td className="text-dark-600">{data.count.toLocaleString()}</td>
+                  <td className="text-dark-600">
+                    <span className="badge badge-info">{data.percentage.toFixed(2)}%</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {data.count.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {data.percentage.toFixed(2)}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {data.avgLatency.toFixed(2)} ms
-                  </td>
+                  <td className="text-dark-600">{data.avgLatency.toFixed(2)} ms</td>
                 </tr>
               ))}
             </tbody>
@@ -156,8 +158,13 @@ export const Overview: React.FC<OverviewProps> = ({ metrics }) => {
       </div>
 
       {/* Last Updated */}
-      <div className="text-center text-sm text-gray-500">
-        Last updated: {new Date(metrics.summary.lastUpdated).toLocaleString()}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/70 backdrop-blur-sm rounded-xl border border-dark-100">
+          <svg className="w-4 h-4 text-dark-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-sm text-dark-600">Last updated: {new Date(metrics.summary.lastUpdated).toLocaleString()}</span>
+        </div>
       </div>
     </div>
   );

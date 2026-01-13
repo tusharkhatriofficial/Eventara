@@ -15,8 +15,10 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ metrics }) => {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading event analytics...</p>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center mb-4 shadow-lg shadow-cyan-500/30 animate-pulse">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          </div>
+          <p className="text-dark-600 font-medium">Loading event analytics...</p>
         </div>
       </div>
     );
@@ -43,13 +45,22 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ metrics }) => {
     : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Title */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Event Analytics</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Comprehensive analysis of event types and patterns
-        </p>
+      <div className="card-gradient p-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gradient">Event Analytics</h1>
+            <p className="text-sm text-dark-600 mt-1">
+              Comprehensive analysis of event types and patterns
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Stats Cards */}

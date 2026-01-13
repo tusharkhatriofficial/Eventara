@@ -1,3 +1,141 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-dark-50 via-white to-primary-50/30;
+    @apply text-dark-900 antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white/80 backdrop-blur-sm border border-dark-100 rounded-2xl shadow-glass;
+    @apply hover:shadow-glass-lg transition-all duration-300;
+  }
+
+  .card-gradient {
+    @apply bg-gradient-to-br from-white via-white to-primary-50/30;
+    @apply border border-primary-100/50 rounded-2xl shadow-glass;
+    @apply hover:shadow-glass-lg transition-all duration-300;
+  }
+
+  .btn-primary {
+    @apply px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700;
+    @apply text-white font-medium rounded-xl shadow-lg shadow-primary-500/30;
+    @apply hover:shadow-xl hover:shadow-primary-500/40 hover:scale-[1.02];
+    @apply active:scale-[0.98] transition-all duration-200;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  .btn-secondary {
+    @apply px-5 py-2.5 bg-white border-2 border-dark-200;
+    @apply text-dark-700 font-medium rounded-xl;
+    @apply hover:bg-dark-50 hover:border-dark-300 hover:shadow-md;
+    @apply active:scale-[0.98] transition-all duration-200;
+  }
+
+  .btn-ghost {
+    @apply px-4 py-2 text-dark-600 font-medium rounded-xl;
+    @apply hover:bg-dark-100/50 hover:text-dark-900;
+    @apply active:scale-[0.98] transition-all duration-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+    @apply shadow-sm transition-all duration-200;
+  }
+
+  .badge-success {
+    @apply bg-gradient-to-r from-emerald-50 to-green-50;
+    @apply text-emerald-700 ring-1 ring-emerald-500/20;
+  }
+
+  .badge-warning {
+    @apply bg-gradient-to-r from-amber-50 to-yellow-50;
+    @apply text-amber-700 ring-1 ring-amber-500/20;
+  }
+
+  .badge-error {
+    @apply bg-gradient-to-r from-red-50 to-rose-50;
+    @apply text-red-700 ring-1 ring-red-500/20;
+  }
+
+  .badge-info {
+    @apply bg-gradient-to-r from-blue-50 to-cyan-50;
+    @apply text-blue-700 ring-1 ring-blue-500/20;
+  }
+
+  .input-modern {
+    @apply w-full px-4 py-3 bg-white/70 border-2 border-dark-200;
+    @apply rounded-xl text-dark-900 placeholder:text-dark-400;
+    @apply focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10;
+    @apply transition-all duration-200;
+  }
+
+  .table-modern {
+    @apply min-w-full divide-y divide-dark-100;
+  }
+
+  .table-modern thead {
+    @apply bg-gradient-to-r from-dark-50 to-primary-50/30;
+  }
+
+  .table-modern th {
+    @apply px-6 py-4 text-left text-xs font-semibold text-dark-600 uppercase tracking-wider;
+  }
+
+  .table-modern tbody {
+    @apply divide-y divide-dark-50 bg-white;
+  }
+
+  .table-modern td {
+    @apply px-6 py-4 whitespace-nowrap text-sm;
+  }
+
+  .stat-card {
+    @apply relative overflow-hidden;
+    @apply bg-gradient-to-br from-white via-white to-primary-50/20;
+    @apply border border-dark-100 rounded-2xl p-6;
+    @apply hover:shadow-xl hover:scale-[1.02] transition-all duration-300;
+    @apply before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary-500/5 before:to-transparent before:opacity-0 before:hover:opacity-100 before:transition-opacity;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent;
+  }
+
+  .bg-glass {
+    @apply bg-white/70 backdrop-blur-md;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(203 213 225);
+    border-radius: 20px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(148 163 184);
+  }
+}
