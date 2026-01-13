@@ -173,9 +173,8 @@ export const RuleEditor: React.FC = () => {
           <label className="block text-sm font-medium text-gray-700 mt-4">Severity</label>
           <select className="mt-1 block w-full border rounded p-2" value={(form as any).severity} onChange={(e) => onField('severity', e.target.value)}>
             <option>CRITICAL</option>
-            <option>HIGH</option>
-            <option>MEDIUM</option>
-            <option>LOW</option>
+            <option>WARNING</option>
+            <option>INFO</option>
           </select>
 
           <label className="block text-sm font-medium text-gray-700 mt-4">Priority</label>
