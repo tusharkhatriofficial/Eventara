@@ -86,7 +86,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NotificationChannelNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotificationChannelNotFoundException(NotificationChannelNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleNotificationChannelNotFoundException(
+            NotificationChannelNotFoundException ex) {
         log.error("Notification channel not found: {}", ex.getMessage());
         ErrorResponse error = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
@@ -151,6 +152,20 @@ public class GlobalExceptionHandler {
                 .build();
 
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        // Don't log missing static resources like favicon.ico as errors
+        log.debug("Resource not found: {}", ex.getMessage());
+        ErrorResponse error = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Not Found")
+                .message("The requested resource was not found")
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
