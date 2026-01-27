@@ -337,6 +337,140 @@ export const RuleEditor: React.FC = () => {
           </div>
         </div>
 
+        {/* Alert Suppression & Rate Limiting */}
+        <div className="card-gradient p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-6 border-b border-dark-100">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-dark-900">Alert Suppression & Rate Limiting</h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-dark-700 mb-2">Suppression Window (minutes)</label>
+              <input
+                type="number"
+                min="0"
+                className="input-modern"
+                placeholder="30"
+                value={(form as any).suppressionWindowMinutes ?? ''}
+                onChange={(e) => onField('suppressionWindowMinutes', e.target.value ? Number(e.target.value) : null)}
+              />
+              <p className="text-xs text-dark-500 mt-2">
+                Time window to suppress duplicate alerts. Set to 0 to disable suppression. Default: 30 minutes
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-dark-700 mb-2">Max Alerts Per Hour</label>
+              <input
+                type="number"
+                min="1"
+                className="input-modern"
+                placeholder="10"
+                value={(form as any).maxAlertsPerHour ?? ''}
+                onChange={(e) => onField('maxAlertsPerHour', e.target.value ? Number(e.target.value) : null)}
+              />
+              <p className="text-xs text-dark-500 mt-2">
+                Maximum alerts this rule can trigger per hour. Default: 10
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Notification Settings (Collapsible) */}
+        <div className="card-gradient p-8">
+          <details className="group">
+            <summary className="cursor-pointer flex items-center gap-3 list-none">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-dark-900">Advanced Notification Settings</h3>
+                <p className="text-xs text-dark-500 mt-1">Optional: Custom templates, retry policies, and escalation</p>
+              </div>
+              <svg className="w-5 h-5 text-dark-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+
+            <div className="mt-6 pt-6 border-t border-dark-100 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-dark-700 mb-2">Custom Message Template</label>
+                <textarea
+                  className="input-modern min-h-[100px] resize-none font-mono text-sm"
+                  placeholder="Override default alert message. Supports variables: {ruleName}, {severity}, {threshold}, {actualValue}"
+                  value={(form as any).notificationConfig?.messageTemplate ?? ''}
+                  onChange={(e) => onField('notificationConfig', {
+                    ...(form as any).notificationConfig,
+                    messageTemplate: e.target.value
+                  })}
+                />
+                <p className="text-xs text-dark-500 mt-2">
+                  Leave empty to use default template
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-dark-700 mb-2">Retry Attempts</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    className="input-modern"
+                    placeholder="3"
+                    value={(form as any).notificationConfig?.retryAttempts ?? ''}
+                    onChange={(e) => onField('notificationConfig', {
+                      ...(form as any).notificationConfig,
+                      retryAttempts: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                  <p className="text-xs text-dark-500 mt-2">Number of retries if notification fails (0-5)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-dark-700 mb-2">Escalation Delay (minutes)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="input-modern"
+                    placeholder="15"
+                    value={(form as any).notificationConfig?.escalationDelayMinutes ?? ''}
+                    onChange={(e) => onField('notificationConfig', {
+                      ...(form as any).notificationConfig,
+                      escalationDelayMinutes: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                  <p className="text-xs text-dark-500 mt-2">Delay before escalating to secondary channels</p>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* Metadata */}
+        <div className="card-gradient p-8">
+          <div>
+            <label className="block text-sm font-semibold text-dark-700 mb-2">Created By (Optional)</label>
+            <input
+              type="text"
+              className="input-modern"
+              placeholder="username or email"
+              value={(form as any).createdBy ?? ''}
+              onChange={(e) => onField('createdBy', e.target.value)}
+            />
+            <p className="text-xs text-dark-500 mt-2">
+              Track who created this rule (auto-filled if you have authentication)
+            </p>
+          </div>
+        </div>
+
         {/* Rule Configuration Card */}
         <div className="card-gradient p-8 space-y-6">
           <div className="flex items-center justify-between pb-6 border-b border-dark-100">

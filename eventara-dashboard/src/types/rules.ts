@@ -71,6 +71,7 @@ export interface UpdateRuleRequest {
   notificationConfig?: Record<string, any>;
   suppressionWindowMinutes?: number;
   maxAlertsPerHour?: number;
+  createdBy?: string;
 }
 
 export interface RuleResponse {
