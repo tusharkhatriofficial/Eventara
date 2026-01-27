@@ -2,7 +2,6 @@ import { ComprehensiveMetrics } from '../types';
 import { AlertOverviewCards } from '../components/cards/AlertOverviewCards';
 import { ActiveAlertsPanel } from '../components/alerts/ActiveAlertsPanel';
 import { AlertSeverityChart, AlertTypeChart } from '../components/charts/AlertStatisticsCharts';
-import { ComingSoonBanner } from '../components/alerts/ComingSoonBanner';
 
 interface AlertsAndAnomaliesProps {
   metrics: ComprehensiveMetrics | null;
@@ -41,7 +40,6 @@ export const AlertsAndAnomalies: React.FC<AlertsAndAnomaliesProps> = ({ metrics 
             </div>
           </div>
           <div className="hidden sm:flex items-center gap-2">
-            <a href="/alerts" className="btn-ghost">Overview</a>
             <a href="/alerts/rules" className="btn-primary">Rules</a>
             <a href="/settings/notifications" className="btn-ghost">Notifications</a>
           </div>
@@ -125,7 +123,7 @@ export const AlertsAndAnomalies: React.FC<AlertsAndAnomaliesProps> = ({ metrics 
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
               <span className="text-purple-600 font-bold">2</span>

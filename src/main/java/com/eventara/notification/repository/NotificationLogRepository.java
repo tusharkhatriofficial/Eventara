@@ -16,57 +16,63 @@ import java.util.List;
 @Repository
 public interface NotificationLogRepository extends JpaRepository<NotificationLog, Long> {
 
-    // Find logs by alert ID
-    List<NotificationLog> findByAlertId(Long alertId);
+        // Find logs by alert ID
+        List<NotificationLog> findByAlertId(Long alertId);
 
-    // Find logs by channel ID
-    List<NotificationLog> findByChannelId(Long channelId);
+        // Find logs by channel ID
+        List<NotificationLog> findByChannelId(Long channelId);
 
-    // Find logs by status
-    List<NotificationLog> findByStatus(NotificationStatus status);
+        // Find logs by status
+        List<NotificationLog> findByStatus(NotificationStatus status);
 
-    // Find pending/retrying notifications (for retry processing)
-    @Query("SELECT n FROM NotificationLog n WHERE n.status IN ('PENDING', 'RETRYING') " +
-            "AND (n.nextRetryAt IS NULL OR n.nextRetryAt <= :now)")
-    List<NotificationLog> findNotificationsToRetry(@Param("now") LocalDateTime now);
+        // Find pending/retrying notifications (for retry processing)
+        @Query("SELECT n FROM NotificationLog n WHERE n.status IN ('PENDING', 'RETRYING') " +
+                        "AND (n.nextRetryAt IS NULL OR n.nextRetryAt <= :now)")
+        List<NotificationLog> findNotificationsToRetry(@Param("now") LocalDateTime now);
 
-    // Find failed notifications
-    @Query("SELECT n FROM NotificationLog n WHERE n.status = 'FAILED' ORDER BY n.createdAt DESC")
-    List<NotificationLog> findFailedNotifications();
+        // Find failed notifications
+        @Query("SELECT n FROM NotificationLog n WHERE n.status = 'FAILED' ORDER BY n.createdAt DESC")
+        List<NotificationLog> findFailedNotifications();
 
-    // Find notifications by channel type
-    List<NotificationLog> findByChannelType(ChannelType channelType);
+        // Find notifications by channel type
+        List<NotificationLog> findByChannelType(ChannelType channelType);
 
-    // Find notifications in time range
-    List<NotificationLog> findBySentAtBetween(LocalDateTime start, LocalDateTime end);
+        // Find notifications in time range
+        List<NotificationLog> findBySentAtBetween(LocalDateTime start, LocalDateTime end);
 
-    // Find notifications with pagination
-    Page<NotificationLog> findByStatus(NotificationStatus status, Pageable pageable);
+        // Find notifications with pagination
+        Page<NotificationLog> findByStatus(NotificationStatus status, Pageable pageable);
 
-    // Count notifications by status
-    long countByStatus(NotificationStatus status);
+        // Count notifications by status
+        long countByStatus(NotificationStatus status);
 
-    // Count notifications by channel type
-    long countByChannelType(ChannelType channelType);
+        // Count notifications by channel type
+        long countByChannelType(ChannelType channelType);
 
-    // Get notification statistics by channel
-    @Query("SELECT n.channelType, n.status, COUNT(n) FROM NotificationLog n " +
-            "WHERE n.sentAt > :since GROUP BY n.channelType, n.status")
-    List<Object[]> getNotificationStatsByChannel(@Param("since") LocalDateTime since);
+        // Get notification statistics by channel
+        @Query("SELECT n.channelType, n.status, COUNT(n) FROM NotificationLog n " +
+                        "WHERE n.sentAt > :since GROUP BY n.channelType, n.status")
+        List<Object[]> getNotificationStatsByChannel(@Param("since") LocalDateTime since);
 
-    // Get average delivery time by channel type
-    @Query("SELECT n.channelType, AVG(n.deliveryTimeMs) FROM NotificationLog n " +
-            "WHERE n.status = 'SENT' AND n.sentAt > :since GROUP BY n.channelType")
-    List<Object[]> getAverageDeliveryTimeByChannel(@Param("since") LocalDateTime since);
+        // Get average delivery time by channel type
+        @Query("SELECT n.channelType, AVG(n.deliveryTimeMs) FROM NotificationLog n " +
+                        "WHERE n.status = 'SENT' AND n.sentAt > :since GROUP BY n.channelType")
+        List<Object[]> getAverageDeliveryTimeByChannel(@Param("since") LocalDateTime since);
 
-    // Delete old notification logs (for cleanup)
-    void deleteByCreatedAtBefore(LocalDateTime date);
+        // Delete old notification logs (for cleanup)
+        void deleteByCreatedAtBefore(LocalDateTime date);
 
-    // Find notifications that need retry
-    @Query("SELECT n FROM NotificationLog n WHERE n.status = 'RETRYING' " +
-            "AND n.retryCount < :maxRetries AND n.nextRetryAt <= :now")
-    List<NotificationLog> findNotificationsNeedingRetry(
-            @Param("maxRetries") Integer maxRetries,
-            @Param("now") LocalDateTime now
-    );
+        // Find notifications that need retry
+        @Query("SELECT n FROM NotificationLog n WHERE n.status = 'RETRYING' " +
+                        "AND n.retryCount < :maxRetries AND n.nextRetryAt <= :now")
+        List<NotificationLog> findNotificationsNeedingRetry(
+                        @Param("maxRetries") Integer maxRetries,
+                        @Param("now") LocalDateTime now);
+
+        // Rate limiting: count notifications sent by channel after a certain time with
+        // specific status
+        long countByChannelIdAndCreatedAtAfterAndStatus(
+                        Long channelId,
+                        LocalDateTime createdAt,
+                        NotificationStatus status);
 }

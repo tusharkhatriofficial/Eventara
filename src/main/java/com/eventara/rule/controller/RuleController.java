@@ -19,7 +19,6 @@ import java.util.List;
 @RequestMapping("/api/v1/rules")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class RuleController {
 
     private final RuleService ruleService;

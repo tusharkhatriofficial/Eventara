@@ -24,13 +24,16 @@ public class AlertTriggerHandler {
 
     private final AlertHistoryRepository alertHistoryRepository;
     private final RuleRepository ruleRepository;
+    private final com.eventara.notification.service.NotificationService notificationService;
 
     @Autowired
     public AlertTriggerHandler(
             AlertHistoryRepository alertHistoryRepository,
-            RuleRepository ruleRepository) {
+            RuleRepository ruleRepository,
+            com.eventara.notification.service.NotificationService notificationService) {
         this.alertHistoryRepository = alertHistoryRepository;
         this.ruleRepository = ruleRepository;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -76,7 +79,89 @@ public class AlertTriggerHandler {
             updateRuleTriggerCount(ruleId);
         }
 
+        // Send notifications if channels are configured
+        if (ruleId != null) {
+            sendNotifications(alert, ruleId);
+        }
+
         log.info("Alert saved with ID: {}", alert.getId());
+    }
+
+    /**
+     * Send notifications for the triggered alert
+     */
+    private void sendNotifications(AlertHistory alert, Long ruleId) {
+        try {
+            AlertRule rule = ruleRepository.findById(ruleId).orElse(null);
+            if (rule == null || rule.getNotificationChannels() == null ||
+                    rule.getNotificationChannels().length == 0) {
+                log.debug("No notification channels configured for rule {}", ruleId);
+                return;
+            }
+
+            // Build notification message
+            com.eventara.notification.dto.NotificationMessage notificationMessage = com.eventara.notification.dto.NotificationMessage
+                    .builder()
+                    .alertId(alert.getId())
+                    .ruleName(alert.getRuleName())
+                    .severity(alert.getSeverity())
+                    .subject("Alert: " + alert.getRuleName())
+                    .message(alert.getMessage())
+                    .thresholdValue(alert.getThresholdValue())
+                    .actualValue(alert.getActualValue())
+                    .triggeredAt(alert.getTriggeredAt())
+                    .context(alert.getContext())
+                    .build();
+
+            // Send notifications asynchronously
+            java.util.List<String> channelNames = java.util.Arrays.asList(rule.getNotificationChannels());
+            notificationService.sendNotification(notificationMessage, channelNames)
+                    .thenAccept(results -> {
+                        log.info("Sent {} notifications for alert {}", results.size(), alert.getId());
+
+                        // Update alert history with notification results
+                        updateAlertWithNotificationResults(alert.getId(), results);
+                    })
+                    .exceptionally(ex -> {
+                        log.error("Error sending notifications for alert {}: {}",
+                                alert.getId(), ex.getMessage(), ex);
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            log.error("Error preparing notifications for alert {}: {}",
+                    alert.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Update alert history with notification results
+     */
+    private void updateAlertWithNotificationResults(Long alertId,
+            java.util.List<com.eventara.notification.dto.response.NotificationResult> results) {
+        try {
+            AlertHistory alert = alertHistoryRepository.findById(alertId).orElse(null);
+            if (alert != null) {
+                java.util.List<java.util.Map<String, Object>> notificationsSent = new java.util.ArrayList<>();
+
+                for (com.eventara.notification.dto.response.NotificationResult result : results) {
+                    java.util.Map<String, Object> notifRecord = new java.util.HashMap<>();
+                    notifRecord.put("channelId", result.getChannelId());
+                    notifRecord.put("channelName", result.getChannelName());
+                    notifRecord.put("status", result.getStatus().toString());
+                    notifRecord.put("sentAt", result.getSentAt() != null ? result.getSentAt().toString() : null);
+                    notifRecord.put("errorMessage", result.getErrorMessage());
+                    notificationsSent.add(notifRecord);
+                }
+
+                alert.setNotificationsSent(notificationsSent);
+                alertHistoryRepository.save(alert);
+                log.debug("Updated alert {} with {} notification results", alertId, results.size());
+            }
+        } catch (Exception e) {
+            log.error("Error updating alert {} with notification results: {}",
+                    alertId, e.getMessage(), e);
+        }
     }
 
     /**

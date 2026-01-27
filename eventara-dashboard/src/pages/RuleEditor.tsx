@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createRule, getRule, updateRule, testRule } from '../utils/api/rules';
 import { CreateRuleRequest, UpdateRuleRequest, TestRuleRequest, RuleResponse, MetricType, Condition } from '../types/rules';
+import { listChannels } from '../utils/api/notifications';
+import type { NotificationChannel } from '../types/notifications';
 
 // Options derived from backend enums (kept in sync with src/main/java/com/eventara/rule/enums)
 const METRIC_TYPES: MetricType[] = [
-  'ERROR_RATE','TOTAL_ERRORS','AVG_LATENCY','P50_LATENCY','P95_LATENCY','P99_LATENCY','MAX_LATENCY','MIN_LATENCY',
-  'EVENTS_PER_SECOND','EVENTS_PER_MINUTE','EVENTS_PER_HOUR','EVENTS_PER_DAY','PEAK_THROUGHPUT','AVG_THROUGHPUT_1H','AVG_THROUGHPUT_24H',
-  'EVENTS_LAST_1_MINUTE','EVENTS_LAST_5_MINUTES','EVENTS_LAST_15_MINUTES','EVENTS_LAST_1_HOUR','EVENTS_LAST_24_HOURS','TOTAL_EVENTS',
-  'UNIQUE_SOURCES','UNIQUE_EVENT_TYPES','UNIQUE_USERS','SYSTEM_HEALTH','ACTIVE_USERS_LAST_1_HOUR','ACTIVE_USERS_LAST_24_HOURS','TOTAL_UNIQUE_USERS'
+  'ERROR_RATE', 'TOTAL_ERRORS', 'AVG_LATENCY', 'P50_LATENCY', 'P95_LATENCY', 'P99_LATENCY', 'MAX_LATENCY', 'MIN_LATENCY',
+  'EVENTS_PER_SECOND', 'EVENTS_PER_MINUTE', 'EVENTS_PER_HOUR', 'EVENTS_PER_DAY', 'PEAK_THROUGHPUT', 'AVG_THROUGHPUT_1H', 'AVG_THROUGHPUT_24H',
+  'EVENTS_LAST_1_MINUTE', 'EVENTS_LAST_5_MINUTES', 'EVENTS_LAST_15_MINUTES', 'EVENTS_LAST_1_HOUR', 'EVENTS_LAST_24_HOURS', 'TOTAL_EVENTS',
+  'UNIQUE_SOURCES', 'UNIQUE_EVENT_TYPES', 'UNIQUE_USERS', 'SYSTEM_HEALTH', 'ACTIVE_USERS_LAST_1_HOUR', 'ACTIVE_USERS_LAST_24_HOURS', 'TOTAL_UNIQUE_USERS'
 ];
 
 const CONDITIONS: Condition[] = [
-  'GREATER_THAN','LESS_THAN','EQUALS','GREATER_THAN_OR_EQUAL','LESS_THAN_OR_EQUAL','NOT_EQUALS','BETWEEN','NOT_BETWEEN'
+  'GREATER_THAN', 'LESS_THAN', 'EQUALS', 'GREATER_THAN_OR_EQUAL', 'LESS_THAN_OR_EQUAL', 'NOT_EQUALS', 'BETWEEN', 'NOT_BETWEEN'
 ];
 import { RuleTestModal } from '../components/rules/RuleTestModal';
 
@@ -35,11 +37,22 @@ export const RuleEditor: React.FC = () => {
   const [testResult, setTestResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [isTestOpen, setIsTestOpen] = useState(false);
+  const [channels, setChannels] = useState<NotificationChannel[]>([]);
 
   useEffect(() => {
     if (isEdit && id) fetchRule(Number(id));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadChannels();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function loadChannels() {
+    try {
+      const data = await listChannels({ enabled: true });
+      setChannels(data);
+    } catch (e) {
+      console.error('Failed to load notification channels:', e);
+    }
+  }
 
   async function fetchRule(id: number) {
     try {
@@ -145,7 +158,7 @@ export const RuleEditor: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => navigate('/alerts/rules')}
               className="p-2 hover:bg-dark-100 rounded-xl transition-colors"
             >
@@ -166,8 +179,8 @@ export const RuleEditor: React.FC = () => {
             </svg>
             Test Rule
           </button>
-          <button 
-            onClick={onSave} 
+          <button
+            onClick={onSave}
             disabled={loading}
             className="btn-primary flex items-center gap-2"
           >
@@ -210,30 +223,30 @@ export const RuleEditor: React.FC = () => {
 
           <div>
             <label className="block text-sm font-semibold text-dark-700 mb-2">Rule Name *</label>
-            <input 
-              className="input-modern" 
+            <input
+              className="input-modern"
               placeholder="e.g., High Error Rate Alert"
-              value={(form as any).name} 
-              onChange={(e) => onField('name', e.target.value)} 
+              value={(form as any).name}
+              onChange={(e) => onField('name', e.target.value)}
             />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-dark-700 mb-2">Description</label>
-            <textarea 
-              className="input-modern min-h-[100px] resize-none" 
+            <textarea
+              className="input-modern min-h-[100px] resize-none"
               placeholder="Describe what this rule monitors and when it triggers"
-              value={(form as any).description} 
-              onChange={(e) => onField('description', e.target.value)} 
+              value={(form as any).description}
+              onChange={(e) => onField('description', e.target.value)}
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-dark-700 mb-2">Rule Type *</label>
-              <select 
-                className="input-modern" 
-                value={(form as any).ruleType} 
+              <select
+                className="input-modern"
+                value={(form as any).ruleType}
                 onChange={(e) => onField('ruleType', e.target.value)}
               >
                 <option value="THRESHOLD">Threshold</option>
@@ -245,9 +258,9 @@ export const RuleEditor: React.FC = () => {
 
             <div>
               <label className="block text-sm font-semibold text-dark-700 mb-2">Severity *</label>
-              <select 
-                className="input-modern" 
-                value={(form as any).severity} 
+              <select
+                className="input-modern"
+                value={(form as any).severity}
                 onChange={(e) => onField('severity', e.target.value)}
               >
                 <option value="CRITICAL">Critical</option>
@@ -259,14 +272,202 @@ export const RuleEditor: React.FC = () => {
 
           <div>
             <label className="block text-sm font-semibold text-dark-700 mb-2">Priority</label>
-            <input 
-              type="number" 
-              className="input-modern" 
+            <input
+              type="number"
+              className="input-modern"
               placeholder="0 = highest priority"
-              value={(form as any).priority ?? 0} 
-              onChange={(e) => onField('priority', Number(e.target.value))} 
+              value={(form as any).priority ?? 0}
+              onChange={(e) => onField('priority', Number(e.target.value))}
             />
             <p className="text-xs text-dark-500 mt-2">Lower numbers have higher priority (0 is highest)</p>
+          </div>
+
+          {/* Notification Channels  */}
+          <div>
+            <label className="block text-sm font-semibold text-dark-700 mb-2">
+              Notification Channels
+            </label>
+            {channels.length === 0 ? (
+              <div className="input-modern bg-gray-50 text-gray-500 flex items-center justify-between">
+                <span>No channels configured</span>
+                <a
+                  href="/settings/notifications"
+                  className="text-primary-600 text-sm font-medium hover:underline"
+                >
+                  Add Channel
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {channels.map((channel) => (
+                  <label
+                    key={channel.id}
+                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={((form as any).notificationChannels || []).includes(channel.name)}
+                      onChange={(e) => {
+                        const current = (form as any).notificationChannels || [];
+                        const updated = e.target.checked
+                          ? [...current, channel.name]
+                          : current.filter((n: string) => n !== channel.name);
+                        onField('notificationChannels', updated);
+                      }}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-900">{channel.name}</span>
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          {channel.channelType}
+                        </span>
+                      </div>
+                      {channel.description && (
+                        <p className="text-xs text-gray-600 mt-1">{channel.description}</p>
+                      )}
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-dark-500 mt-2">
+              Select channels to receive notifications when this rule triggers
+            </p>
+          </div>
+        </div>
+
+        {/* Alert Suppression & Rate Limiting */}
+        <div className="card-gradient p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-6 border-b border-dark-100">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-dark-900">Alert Suppression & Rate Limiting</h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-dark-700 mb-2">Suppression Window (minutes)</label>
+              <input
+                type="number"
+                min="0"
+                className="input-modern"
+                placeholder="30"
+                value={(form as any).suppressionWindowMinutes ?? ''}
+                onChange={(e) => onField('suppressionWindowMinutes', e.target.value ? Number(e.target.value) : null)}
+              />
+              <p className="text-xs text-dark-500 mt-2">
+                Time window to suppress duplicate alerts. Set to 0 to disable suppression. Default: 30 minutes
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-dark-700 mb-2">Max Alerts Per Hour</label>
+              <input
+                type="number"
+                min="1"
+                className="input-modern"
+                placeholder="10"
+                value={(form as any).maxAlertsPerHour ?? ''}
+                onChange={(e) => onField('maxAlertsPerHour', e.target.value ? Number(e.target.value) : null)}
+              />
+              <p className="text-xs text-dark-500 mt-2">
+                Maximum alerts this rule can trigger per hour. Default: 10
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Notification Settings (Collapsible) */}
+        <div className="card-gradient p-8">
+          <details className="group">
+            <summary className="cursor-pointer flex items-center gap-3 list-none">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-dark-900">Advanced Notification Settings</h3>
+                <p className="text-xs text-dark-500 mt-1">Optional: Custom templates, retry policies, and escalation</p>
+              </div>
+              <svg className="w-5 h-5 text-dark-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </summary>
+
+            <div className="mt-6 pt-6 border-t border-dark-100 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-dark-700 mb-2">Custom Message Template</label>
+                <textarea
+                  className="input-modern min-h-[100px] resize-none font-mono text-sm"
+                  placeholder="Override default alert message. Supports variables: {ruleName}, {severity}, {threshold}, {actualValue}"
+                  value={(form as any).notificationConfig?.messageTemplate ?? ''}
+                  onChange={(e) => onField('notificationConfig', {
+                    ...(form as any).notificationConfig,
+                    messageTemplate: e.target.value
+                  })}
+                />
+                <p className="text-xs text-dark-500 mt-2">
+                  Leave empty to use default template
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-dark-700 mb-2">Retry Attempts</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    className="input-modern"
+                    placeholder="3"
+                    value={(form as any).notificationConfig?.retryAttempts ?? ''}
+                    onChange={(e) => onField('notificationConfig', {
+                      ...(form as any).notificationConfig,
+                      retryAttempts: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                  <p className="text-xs text-dark-500 mt-2">Number of retries if notification fails (0-5)</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-dark-700 mb-2">Escalation Delay (minutes)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="input-modern"
+                    placeholder="15"
+                    value={(form as any).notificationConfig?.escalationDelayMinutes ?? ''}
+                    onChange={(e) => onField('notificationConfig', {
+                      ...(form as any).notificationConfig,
+                      escalationDelayMinutes: e.target.value ? Number(e.target.value) : null
+                    })}
+                  />
+                  <p className="text-xs text-dark-500 mt-2">Delay before escalating to secondary channels</p>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* Metadata */}
+        <div className="card-gradient p-8">
+          <div>
+            <label className="block text-sm font-semibold text-dark-700 mb-2">Created By (Optional)</label>
+            <input
+              type="text"
+              className="input-modern"
+              placeholder="username or email"
+              value={(form as any).createdBy ?? ''}
+              onChange={(e) => onField('createdBy', e.target.value)}
+            />
+            <p className="text-xs text-dark-500 mt-2">
+              Track who created this rule (auto-filled if you have authentication)
+            </p>
           </div>
         </div>
 
@@ -282,23 +483,21 @@ export const RuleEditor: React.FC = () => {
               <h3 className="text-lg font-semibold text-dark-900">Configuration</h3>
             </div>
             <div className="flex items-center gap-2">
-              <button 
-                onClick={() => setJsonMode(false)} 
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  !jsonMode 
-                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30' 
-                    : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
-                }`}
+              <button
+                onClick={() => setJsonMode(false)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${!jsonMode
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
+                  }`}
               >
                 Form
               </button>
-              <button 
-                onClick={() => setJsonMode(true)} 
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                  jsonMode 
-                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30' 
-                    : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
-                }`}
+              <button
+                onClick={() => setJsonMode(true)}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${jsonMode
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-dark-100 text-dark-600 hover:bg-dark-200'
+                  }`}
               >
                 JSON
               </button>
@@ -309,9 +508,9 @@ export const RuleEditor: React.FC = () => {
             <div className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Metric Type *</label>
-                <select 
-                  className="input-modern" 
-                  value={(form as any).ruleConfig?.metricType || ''} 
+                <select
+                  className="input-modern"
+                  value={(form as any).ruleConfig?.metricType || ''}
                   onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, metricType: e.target.value })}
                 >
                   <option value="">Select metric to monitor</option>
@@ -331,9 +530,9 @@ export const RuleEditor: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Condition *</label>
-                <select 
-                  className="input-modern" 
-                  value={(form as any).ruleConfig?.condition || ''} 
+                <select
+                  className="input-modern"
+                  value={(form as any).ruleConfig?.condition || ''}
                   onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, condition: e.target.value })}
                 >
                   <option value="">Select condition</option>
@@ -353,11 +552,11 @@ export const RuleEditor: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Threshold Value *</label>
-                <input 
-                  className="input-modern" 
+                <input
+                  className="input-modern"
                   placeholder="e.g., 100, 5.0, or 'high'"
-                  value={(form as any).ruleConfig?.thresholdValue || ''} 
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: e.target.value })} 
+                  value={(form as any).ruleConfig?.thresholdValue || ''}
+                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: e.target.value })}
                 />
                 {((form as any).ruleConfig?.thresholdValue === undefined || (form as any).ruleConfig?.thresholdValue === '') && (
                   <p className="text-xs text-dark-500 mt-2">The threshold value that triggers the alert</p>
@@ -366,13 +565,13 @@ export const RuleEditor: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Time Window (minutes)</label>
-                <input 
-                  type="number" 
-                  min={1} 
-                  className="input-modern" 
+                <input
+                  type="number"
+                  min={1}
+                  className="input-modern"
                   placeholder="e.g., 5"
-                  value={(form as any).ruleConfig?.timeWindowMinutes || ''} 
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, timeWindowMinutes: e.target.value ? Number(e.target.value) : undefined })} 
+                  value={(form as any).ruleConfig?.timeWindowMinutes || ''}
+                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, timeWindowMinutes: e.target.value ? Number(e.target.value) : undefined })}
                 />
                 {((form as any).ruleConfig?.timeWindowMinutes !== undefined && ((form as any).ruleConfig?.timeWindowMinutes <= 0 || !Number.isInteger((form as any).ruleConfig?.timeWindowMinutes))) && (
                   <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
@@ -392,11 +591,11 @@ export const RuleEditor: React.FC = () => {
           {jsonMode && (
             <div>
               <label className="block text-sm font-semibold text-dark-700 mb-2">Rule Config (JSON)</label>
-              <textarea 
-                className="input-modern font-mono text-sm min-h-[400px] resize-none" 
+              <textarea
+                className="input-modern font-mono text-sm min-h-[400px] resize-none"
                 placeholder='{\n  "metricType": "ERROR_RATE",\n  "condition": "GREATER_THAN",\n  "thresholdValue": "5.0",\n  "timeWindowMinutes": 5\n}'
-                value={jsonText} 
-                onChange={(e) => setJsonText(e.target.value)} 
+                value={jsonText}
+                onChange={(e) => setJsonText(e.target.value)}
               />
             </div>
           )}
@@ -407,11 +606,10 @@ export const RuleEditor: React.FC = () => {
       {testResult && (
         <div className="card-gradient p-8 animate-scale-in">
           <div className="flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              testResult.success 
-                ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/30' 
-                : 'bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-500/30'
-            }`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${testResult.success
+              ? 'bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/30'
+              : 'bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-500/30'
+              }`}>
               {testResult.success ? (
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -430,8 +628,8 @@ export const RuleEditor: React.FC = () => {
                   {JSON.stringify(testResult.errors, null, 2)}
                 </pre>
               )}
-              <button 
-                onClick={() => setIsTestOpen(true)} 
+              <button
+                onClick={() => setIsTestOpen(true)}
                 className="btn-secondary mt-4"
               >
                 View Detailed Results
