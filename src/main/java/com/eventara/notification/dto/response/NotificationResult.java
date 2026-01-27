@@ -18,6 +18,10 @@ public class NotificationResult {
 
     private Long alertId;
 
+    private Long channelId;
+
+    private String channelName;
+
     private String channelType;
 
     private String recipient;
@@ -27,6 +31,12 @@ public class NotificationResult {
     private String message;
 
     private LocalDateTime sentAt;
+
+    private Integer responseCode;
+
+    private String responseBody;
+
+    private Integer retryCount;
 
     private Integer deliveryTimeMs;
 

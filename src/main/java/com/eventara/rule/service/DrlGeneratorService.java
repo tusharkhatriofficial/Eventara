@@ -130,43 +130,6 @@ public class DrlGeneratorService {
     }
 
 
-//    private String generateThresholdDrl(CreateRuleRequest request) {
-//        Map<String, Object> config = request.getRuleConfig();
-//
-//        String metricType = config.get("metricType").toString();
-//        String condition = config.get("condition").toString();
-//        Double thresholdValue = Double.parseDouble(config.get("thresholdValue").toString());
-//
-//        String metricPath = getMetricPath(metricType);
-//        String operator = Condition.valueOf(condition).getOperator();
-//
-//        // Get the Java type for this metric
-//        String javaType = getMetricJavaType(metricType);
-//        String castExpression = getCastExpression(metricPath, javaType);
-//
-//        StringBuilder drl = new StringBuilder();
-//        drl.append("package com.eventara.rules\n\n");
-//        drl.append("import com.eventara.drools.fact.MetricsFact\n");
-//        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-//
-//        drl.append("rule \"").append(request.getName()).append("\"\n");
-//        drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-//        drl.append("    when\n");
-//        drl.append("        $metrics: MetricsFact(").append(metricPath).append(" ").append(operator).append(" ").append(thresholdValue).append(")\n");
-//        drl.append("        $handler: AlertTriggerHandler()\n");
-//        drl.append("    then\n");
-//        drl.append("        $handler.handleThresholdAlert(\n");
-//        drl.append("            null,\n");
-//        drl.append("            \"").append(request.getName()).append("\",\n");
-//        drl.append("            \"").append(request.getSeverity()).append("\",\n");
-//        drl.append("            ").append(thresholdValue).append(",\n");
-//        drl.append("            ").append(castExpression).append("\n");  // ← FIXED: Cast to Double
-//        drl.append("        );\n");
-//        drl.append("end\n");
-//
-//        return drl.toString();
-//    }
-
     private String generateThresholdDrl(CreateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
 

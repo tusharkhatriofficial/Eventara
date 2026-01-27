@@ -31,5 +31,7 @@ public class CreateNotificationChannelRequest {
 
     private Integer rateLimitPerHour;
 
+    private Boolean enabled;
+
     private String createdBy;
 }
