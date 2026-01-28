@@ -1,10 +1,5 @@
 import { Line } from 'react-chartjs-2';
-import { useEffect, useState, useRef } from 'react';
-
-interface DataPoint {
-  timestamp: number;
-  value: number;
-}
+import { useEffect, useRef, useState } from 'react';
 
 interface RealTimeLineChartProps {
   title: string;
@@ -13,38 +8,54 @@ interface RealTimeLineChartProps {
   maxDataPoints?: number;
 }
 
+interface DataPoint {
+  time: string;
+  value: number;
+}
+
 export const RealTimeLineChart: React.FC<RealTimeLineChartProps> = ({
   title,
   currentValue,
-  color = 'rgb(59, 130, 246)',
+  color = 'rgb(99, 102, 241)',
   maxDataPoints = 60
 }) => {
   const [dataPoints, setDataPoints] = useState<DataPoint[]>([]);
-  const previousValueRef = useRef(currentValue);
+  const lastValueRef = useRef<number>(currentValue);
 
   useEffect(() => {
-    // Only add new point if value changed
-    if (previousValueRef.current !== currentValue) {
-      const now = Date.now();
+    // Only update if value actually changed
+    if (currentValue !== lastValueRef.current) {
+      lastValueRef.current = currentValue;
+
+      const now = new Date();
       setDataPoints(prev => {
-        const newPoints = [...prev, { timestamp: now, value: currentValue }];
+        const newPoints = [
+          ...prev,
+          {
+            time: now.toLocaleTimeString(),
+            value: currentValue
+          }
+        ];
         return newPoints.slice(-maxDataPoints);
       });
-      previousValueRef.current = currentValue;
     }
   }, [currentValue, maxDataPoints]);
 
   const data = {
-    labels: dataPoints.map((_, index) => `${maxDataPoints - dataPoints.length + index + 1}s`),
+    labels: dataPoints.map(p => p.time),
     datasets: [
       {
         label: title,
-        data: dataPoints.map(point => point.value),
+        data: dataPoints.map(p => p.value),
         borderColor: color,
-        backgroundColor: color.replace('rgb', 'rgba').replace(')', ', 0.1)'),
+        backgroundColor: `${color.replace('rgb', 'rgba').replace(')', ', 0.1)')}`,
         fill: true,
         tension: 0.4,
         pointRadius: 0,
+        pointHoverRadius: 4,
+        pointBackgroundColor: color,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
         borderWidth: 2,
       },
     ],
@@ -57,8 +68,15 @@ export const RealTimeLineChart: React.FC<RealTimeLineChartProps> = ({
       legend: {
         display: false,
       },
-      title: {
-        display: false,
+      tooltip: {
+        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        borderColor: `${color.replace('rgb', 'rgba').replace(')', ', 0.5)')}`,
+        borderWidth: 1,
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: false,
       },
     },
     scales: {
@@ -67,30 +85,41 @@ export const RealTimeLineChart: React.FC<RealTimeLineChartProps> = ({
       },
       y: {
         beginAtZero: true,
+        grid: {
+          color: 'rgba(148, 163, 184, 0.1)',
+        },
         ticks: {
-          precision: 0,
+          color: '#94a3b8',
+          font: {
+            size: 10,
+          },
         },
       },
     },
     animation: {
-      duration: 0,
+      duration: 300,
+    },
+    interaction: {
+      intersect: false,
+      mode: 'index' as const,
     },
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+    <div className="card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-medium text-gray-600">{title}</h3>
-        <span className="text-2xl font-bold text-gray-900">
-          {currentValue.toFixed(2)}
-        </span>
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+          <p className="text-sm text-slate-500 mt-0.5">Real-time updates</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: color }}></span>
+          <span className="text-2xl font-bold text-slate-900">{currentValue.toFixed(2)}</span>
+        </div>
       </div>
-      <div className="h-32">
+      <div className="h-48">
         <Line data={data} options={options} />
       </div>
-      <p className="text-xs text-gray-500 text-center mt-2">
-        Last {maxDataPoints} seconds
-      </p>
     </div>
   );
 };

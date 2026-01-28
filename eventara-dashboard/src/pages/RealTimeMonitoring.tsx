@@ -12,19 +12,20 @@ interface RealTimeMonitoringProps {
 export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics }) => {
   if (!metrics) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-[60vh]">
         <div className="text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30 animate-pulse">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-success-500 to-success-600 flex items-center justify-center mb-4 mx-auto shadow-lg shadow-success-500/25">
+            <div className="loading-spinner border-white/20 border-t-white"></div>
           </div>
-          <p className="text-dark-600 font-medium">Loading real-time data...</p>
+          <p className="text-slate-600 font-medium">Loading real-time data...</p>
+          <p className="text-sm text-slate-400 mt-1">Establishing connection</p>
         </div>
       </div>
     );
   }
 
   // Determine status based on error rate
-  const getErrorRateStatus = (rate: number) => {
+  const getErrorRateStatus = (rate: number): 'normal' | 'warning' | 'critical' => {
     if (rate >= 10) return 'critical';
     if (rate >= 5) return 'warning';
     return 'normal';
@@ -33,19 +34,19 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
   const sources = Object.entries(metrics.eventsBySource);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Title */}
-      <div className="card-gradient p-8">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-pulse">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="page-header">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-success-500 to-success-600 flex items-center justify-center shadow-lg shadow-success-500/25 animate-pulse">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gradient">Real-Time Monitoring</h1>
-            <p className="text-sm text-dark-600 mt-1 flex items-center gap-2">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <h1 className="page-title">Real-Time Monitoring</h1>
+            <p className="page-subtitle flex items-center gap-2">
+              <span className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></span>
               Live system metrics updating every second
             </p>
           </div>
@@ -53,7 +54,7 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
       </div>
 
       {/* Large Live Metrics Display */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         <LiveMetricDisplay
           label="Current Throughput"
           value={metrics.throughput.current.perSecond.toFixed(2)}
@@ -61,14 +62,14 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
           status="normal"
           subtitle={`Peak: ${metrics.throughput.peak.value.toFixed(2)} events/sec`}
         />
-        
+
         <LiveMetricDisplay
           label="Last Minute"
           value={metrics.timeWindows.last1Minute}
           unit="events"
           status="normal"
         />
-        
+
         <LiveMetricDisplay
           label="Error Rate"
           value={metrics.errorAnalysis.errorRate.toFixed(2)}
@@ -79,29 +80,29 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
       </div>
 
       {/* Circular Gauges */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
         <CircularGauge
           label="Events/Second"
           value={metrics.throughput.current.perSecond}
           max={Math.max(metrics.throughput.peak.value, 10)}
           unit="eps"
-          color="#3B82F6"
+          color="#6366f1"
         />
-        
+
         <CircularGauge
           label="Active Sources"
           value={metrics.summary.uniqueSources}
           max={20}
           unit="sources"
-          color="#10B981"
+          color="#10b981"
         />
-        
+
         <CircularGauge
           label="Active Users"
           value={metrics.userMetrics.activeUsersLast1Hour}
           max={Math.max(metrics.userMetrics.totalUniqueUsers, 10)}
           unit="users"
-          color="#F59E0B"
+          color="#f59e0b"
         />
       </div>
 
@@ -110,10 +111,10 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
         <RealTimeLineChart
           title="Events/Second Trend"
           currentValue={metrics.throughput.current.perSecond}
-          color="rgb(59, 130, 246)"
+          color="rgb(99, 102, 241)"
           maxDataPoints={60}
         />
-        
+
         <RealTimeLineChart
           title="Events (Last Minute)"
           currentValue={metrics.timeWindows.last1Minute}
@@ -123,45 +124,59 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
       </div>
 
       {/* Time Windows Grid */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Time Window Metrics</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-600 font-medium">1 Minute</p>
-            <p className="text-3xl font-bold text-blue-900 mt-2">
-              {metrics.timeWindows.last1Minute}
+      <div className="card p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-500/25">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          Time Window Metrics
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="text-center p-4 bg-primary-50 rounded-xl border border-primary-100">
+            <p className="text-sm text-primary-600 font-medium">1 Minute</p>
+            <p className="text-2xl font-bold text-primary-900 mt-2">
+              {metrics.timeWindows.last1Minute.toLocaleString()}
             </p>
           </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-            <p className="text-sm text-green-600 font-medium">5 Minutes</p>
-            <p className="text-3xl font-bold text-green-900 mt-2">
-              {metrics.timeWindows.last5Minutes}
+          <div className="text-center p-4 bg-success-50 rounded-xl border border-success-100">
+            <p className="text-sm text-success-600 font-medium">5 Minutes</p>
+            <p className="text-2xl font-bold text-success-900 mt-2">
+              {metrics.timeWindows.last5Minutes.toLocaleString()}
             </p>
           </div>
-          <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-            <p className="text-sm text-yellow-600 font-medium">15 Minutes</p>
-            <p className="text-3xl font-bold text-yellow-900 mt-2">
-              {metrics.timeWindows.last15Minutes}
+          <div className="text-center p-4 bg-warning-50 rounded-xl border border-warning-100">
+            <p className="text-sm text-warning-600 font-medium">15 Minutes</p>
+            <p className="text-2xl font-bold text-warning-900 mt-2">
+              {metrics.timeWindows.last15Minutes.toLocaleString()}
             </p>
           </div>
-          <div className="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
-            <p className="text-sm text-purple-600 font-medium">1 Hour</p>
-            <p className="text-3xl font-bold text-purple-900 mt-2">
-              {metrics.timeWindows.last1Hour}
+          <div className="text-center p-4 bg-violet-50 rounded-xl border border-violet-100">
+            <p className="text-sm text-violet-600 font-medium">1 Hour</p>
+            <p className="text-2xl font-bold text-violet-900 mt-2">
+              {metrics.timeWindows.last1Hour.toLocaleString()}
             </p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-sm text-gray-600 font-medium">24 Hours</p>
-            <p className="text-3xl font-bold text-gray-900 mt-2">
-              {metrics.timeWindows.last24Hours}
+          <div className="text-center p-4 bg-slate-50 rounded-xl border border-slate-200 col-span-2 sm:col-span-1">
+            <p className="text-sm text-slate-600 font-medium">24 Hours</p>
+            <p className="text-2xl font-bold text-slate-900 mt-2">
+              {metrics.timeWindows.last24Hours.toLocaleString()}
             </p>
           </div>
         </div>
       </div>
 
       {/* Active Sources Status */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Active Sources</h3>
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/25">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+            </svg>
+          </div>
+          Active Sources
+        </h3>
         {sources.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {sources.map(([sourceName, sourceMetrics]) => (
@@ -173,8 +188,13 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
             ))}
           </div>
         ) : (
-          <div className="bg-white p-12 rounded-lg shadow-sm border border-gray-200 text-center">
-            <p className="text-gray-500">No active sources detected</p>
+          <div className="card p-12 text-center">
+            <div className="empty-state-icon mx-auto">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
+              </svg>
+            </div>
+            <p className="text-slate-500 mt-4">No active sources detected</p>
           </div>
         )}
       </div>
@@ -183,10 +203,10 @@ export const RealTimeMonitoring: React.FC<RealTimeMonitoringProps> = ({ metrics 
       <ActiveAnomaliesAlert anomalies={metrics.anomalies} />
 
       {/* Last Updated */}
-      <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          <span className="text-sm text-gray-600">
+      <div className="flex justify-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 shadow-sm">
+          <div className="w-2 h-2 bg-success-500 rounded-full animate-pulse"></div>
+          <span className="text-sm text-slate-500">
             Live • Updated {new Date(metrics.summary.lastUpdated).toLocaleTimeString()}
           </span>
         </div>

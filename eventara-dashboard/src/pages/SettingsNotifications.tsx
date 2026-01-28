@@ -70,92 +70,103 @@ export const SettingsNotifications: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-primary-600 animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading channels...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="card-gradient p-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gradient">Notifications & Integrations</h1>
-            <p className="text-sm text-dark-600 mt-1">
-              Configure notification channels (Slack, Email, Webhooks) used by alert rules
-            </p>
+      <div className="page-header">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="page-icon">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="page-title">Notifications & Integrations</h1>
+              <p className="page-subtitle">Configure notification channels used by alert rules</p>
+            </div>
           </div>
-          <button
-            onClick={handleCreateChannel}
-            className="btn-primary"
-          >
-            + Add Channel
+          <button onClick={handleCreateChannel} className="btn-primary">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Channel
           </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="card-gradient p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+        <div className="stat-card">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/25">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2  2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
             </div>
             <div>
-              <div className="text-2xl font-bold text-dark-900">{stats.total}</div>
-              <div className="text-sm text-dark-600">Total Channels</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.total}</div>
+              <div className="text-sm text-slate-500">Total Channels</div>
             </div>
           </div>
         </div>
 
-        <div className="card-gradient p-6">
+        <div className="stat-card">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-success-500 to-success-600 flex items-center justify-center shadow-lg shadow-success-500/25">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <div className="text-2xl font-bold text-dark-900">{stats.enabled}</div>
-              <div className="text-sm text-dark-600">Active Channels</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.enabled}</div>
+              <div className="text-sm text-slate-500">Active Channels</div>
             </div>
           </div>
         </div>
 
-        <div className="card-gradient p-6">
+        <div className="stat-card">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg shadow-violet-500/25">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
             <div>
-              <div className="text-2xl font-bold text-dark-900">{stats.webhooks}</div>
-              <div className="text-sm text-dark-600">Webhooks</div>
+              <div className="text-2xl font-bold text-slate-900">{stats.webhooks}</div>
+              <div className="text-sm text-slate-500">Webhooks</div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Channels List */}
-      <div className="card-gradient p-6">
-        <h2 className="text-xl font-bold text-dark-900 mb-6">Notification Channels</h2>
+      <div className="card p-6">
+        <h2 className="text-lg font-semibold text-slate-900 mb-6">Notification Channels</h2>
 
         {channels.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+          <div className="empty-state py-12">
+            <div className="empty-state-icon">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No notification channels configured yet</h3>
-            <p className="text-gray-600 mb-4">Add your first channel to start receiving alerts</p>
+            <h3 className="empty-state-title">No notification channels configured</h3>
+            <p className="empty-state-description">Add your first channel to start receiving alerts</p>
             <button onClick={handleCreateChannel} className="btn-primary">
-              + Add Channel
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Channel
             </button>
           </div>
         ) : (
@@ -163,13 +174,13 @@ export const SettingsNotifications: React.FC = () => {
             {channels.map((channel) => (
               <div
                 key={channel.id}
-                className="flex items-center justify-between p-5 bg-white rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300"
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${channel.channelType === 'WEBHOOK' ? 'bg-purple-100 text-purple-600' :
-                    channel.channelType === 'EMAIL' ? 'bg-blue-100 text-blue-600' :
-                      channel.channelType === 'SLACK' ? 'bg-green-100 text-green-600' :
-                        'bg-gray-100 text-gray-600'
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg ${channel.channelType === 'WEBHOOK' ? 'bg-violet-100 text-violet-600' :
+                      channel.channelType === 'EMAIL' ? 'bg-blue-100 text-blue-600' :
+                        channel.channelType === 'SLACK' ? 'bg-success-100 text-success-600' :
+                          'bg-slate-100 text-slate-600'
                     }`}>
                     {channel.channelType === 'WEBHOOK' && '🔗'}
                     {channel.channelType === 'EMAIL' && '📧'}
@@ -177,18 +188,15 @@ export const SettingsNotifications: React.FC = () => {
                     {channel.channelType === 'SMS' && '📱'}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-900">{channel.name}</h3>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${channel.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-slate-900">{channel.name}</h3>
+                      <span className={`badge ${channel.enabled ? 'badge-success' : 'badge-neutral'}`}>
                         {channel.enabled ? 'Active' : 'Disabled'}
                       </span>
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        {channel.channelType}
-                      </span>
+                      <span className="badge badge-info">{channel.channelType}</span>
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{channel.description || 'No description'}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                    <p className="text-sm text-slate-500 mt-1">{channel.description || 'No description'}</p>
+                    <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-400">
                       <span>📤 {channel.totalSent || 0} sent</span>
                       <span>❌ {channel.totalFailed || 0} failed</span>
                       {channel.lastUsedAt && (
@@ -198,16 +206,16 @@ export const SettingsNotifications: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 sm:flex-shrink-0">
                   <button
                     onClick={() => handleTest(channel.id)}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="btn-secondary btn-sm"
                   >
                     Test
                   </button>
                   <button
                     onClick={() => handleDelete(channel.id)}
-                    className="px-3 py-1.5 text-sm text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+                    className="btn btn-sm text-error-600 border-2 border-error-200 hover:bg-error-50"
                   >
                     Delete
                   </button>
@@ -280,24 +288,24 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ onClose, onSucc
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <form onSubmit={handleSubmit}>
           {/* Modal Header */}
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-2xl font-bold text-gray-900">Add Notification Channel</h2>
-            <p className="text-sm text-gray-600 mt-1">Configure a new notification channel for alerts</p>
+          <div className="modal-header">
+            <h2 className="text-xl font-bold text-slate-900">Add Notification Channel</h2>
+            <p className="text-sm text-slate-500 mt-1">Configure a new notification channel for alerts</p>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 space-y-5">
+          <div className="modal-body space-y-5">
             {/* Channel Type */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Channel Type</label>
+              <label className="input-label">Channel Type</label>
               <select
                 value={channelType}
                 onChange={(e) => setChannelType(e.target.value as ChannelType)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="select"
                 required
               >
                 <option value="WEBHOOK">Webhook</option>
@@ -309,12 +317,12 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ onClose, onSucc
 
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Channel Name</label>
+              <label className="input-label">Channel Name</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="input"
                 placeholder="production-alerts"
                 required
               />
@@ -322,11 +330,11 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ onClose, onSucc
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+              <label className="input-label">Description (Optional)</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="textarea"
                 placeholder="Send critical alerts to Slack"
                 rows={2}
               />
@@ -336,50 +344,46 @@ const CreateChannelModal: React.FC<CreateChannelModalProps> = ({ onClose, onSucc
             {channelType === 'WEBHOOK' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                  <label className="input-label">Webhook URL</label>
                   <input
                     type="url"
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input"
                     placeholder="https://hooks.slack.com/services/..."
                     required={channelType === 'WEBHOOK'}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    The URL that will receive POST requests when alerts fire
-                  </p>
+                  <p className="input-hint">The URL that will receive POST requests when alerts fire</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Auth Token (Optional)</label>
+                  <label className="input-label">Auth Token (Optional)</label>
                   <input
                     type="password"
                     value={authToken}
                     onChange={(e) => setAuthToken(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="input"
                     placeholder="Bearer token for authentication"
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Will be sent as Authorization: Bearer token header
-                  </p>
+                  <p className="input-hint">Will be sent as Authorization: Bearer token header</p>
                 </div>
               </>
             )}
           </div>
 
           {/* Modal Footer */}
-          <div className="p-6 border-t border-gray-200 flex items-center justify-end gap-3">
+          <div className="modal-footer">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="btn-secondary"
               disabled={submitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="btn-primary"
               disabled={submitting}
             >
               {submitting ? 'Creating...' : 'Create Channel'}

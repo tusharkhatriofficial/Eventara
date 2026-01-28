@@ -9,10 +9,6 @@ export const UserStatsOverview: React.FC<UserStatsOverviewProps> = ({ userMetric
     ? (userMetrics.activeUsersLast1Hour / userMetrics.totalUniqueUsers) * 100
     : 0;
 
-  const retentionRate = userMetrics.activeUsersLast1Hour > 0
-    ? (userMetrics.activeUsersLast24Hours / userMetrics.totalUniqueUsers) * 100
-    : 0;
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Total Users */}
