@@ -45,9 +45,9 @@
     ·
     <a href="#roadmap">Roadmap</a>
   </p>
-  
-  <img width="1771" height="887" alt="1111" src="https://github.com/user-attachments/assets/31ef4920-588a-4da9-9219-a465ee19b06f" />
-  <img width="1771" height="887" alt="2222" src="https://github.com/user-attachments/assets/78612121-75ad-4cb4-83b7-03c4e03f6173" />
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 04 28 PM" src="https://github.com/user-attachments/assets/030e2526-0e85-474c-94f2-940920de438b" />
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 25 PM" src="https://github.com/user-attachments/assets/5c4641bb-4838-40c4-8629-ba0caabb3632" />
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 52 PM" src="https://github.com/user-attachments/assets/15989697-e6cd-4c07-a2d8-5cdb81e3f221" />
 
 </div>
 
