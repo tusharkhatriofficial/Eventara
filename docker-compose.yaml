@@ -1,7 +1,7 @@
 services:
-  # PostgreSQL Database
+  # PostgreSQL with TimescaleDB Extension (for time-series metrics)
   postgres:
-    image: postgres:14
+    image: timescale/timescaledb:latest-pg14
     container_name: postgres14
     restart: unless-stopped
     ports:
@@ -16,6 +16,24 @@ services:
       - eventara-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis (for real-time metrics with sliding windows)
+  redis:
+    image: redis:7-alpine
+    container_name: eventara-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - eventara-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -114,6 +132,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8080:8080"
     environment:
@@ -123,8 +143,15 @@ services:
       SPRING_DATASOURCE_PASSWORD: mysecretpassword
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
-      # Kafka config (for when we add Kafka integration)
+      # Kafka config
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+      # Redis config (for distributed metrics)
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+      # Metrics config
+      EVENTARA_METRICS_DISTRIBUTED_ENABLED: "true"
 
       # Profile
       SPRING_PROFILES_ACTIVE: docker
@@ -156,6 +183,8 @@ volumes:
   postgres_data:
     driver: local
   kafka_data:
+    driver: local
+  redis_data:
     driver: local
 
 networks:

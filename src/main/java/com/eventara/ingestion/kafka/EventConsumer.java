@@ -1,9 +1,12 @@
 package com.eventara.ingestion.kafka;
+
 import com.eventara.analytics.service.ComprehensiveMetricsService;
 import com.eventara.common.dto.EventDto;
 import com.eventara.ingestion.mapper.EventMapper;
 import com.eventara.ingestion.model.entity.Event;
 import com.eventara.common.repository.EventRepository;
+import com.eventara.metrics.config.MetricsProperties;
+import com.eventara.metrics.service.DistributedMetricsService;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,52 +33,62 @@ public class EventConsumer {
     @Autowired
     private ComprehensiveMetricsService comprehensiveMetricsService;
 
+    @Autowired
+    private DistributedMetricsService distributedMetricsService;
+
+    @Autowired
+    private MetricsProperties metricsProperties;
+
     /*
      * Listens to Kafka topic and processes events
      * This method runs continuously in background!
      *
      * @param payload The event data from Kafka
+     * 
      * @param partition Which Kafka partition the message came from
+     * 
      * @param offset Position of message in partition
+     * 
      * @param acknowledgment Manual acknowledgment to commit offset
      */
 
-    @KafkaListener(
-            topics = "${eventara.kafka.topics.events-raw}",
-            groupId = "${spring.kafka.consumer.group-id}",
-            containerFactory = "kafkaListenerContainerFactory"
-    )
+    @KafkaListener(topics = "${eventara.kafka.topics.events-raw}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void ConsumeEvent(
-//            @Payload Map<String, Object> payload,
+            // @Payload Map<String, Object> payload,
             @Payload Event event,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
-            Acknowledgment acknowledgment
-    ){
-        try{
+            Acknowledgment acknowledgment) {
+        try {
 
             logger.info("Received message from Kafka: partition={}, offset={}", partition, offset);
 
-//            Event event = objectMapper.convertValue(payload, Event.class);
+            // Event event = objectMapper.convertValue(payload, Event.class);
 
             logger.info("Processing event: eventId={}, eventType={}, source={}",
                     event.getEventId(), event.getEventType(), event.getSource());
 
             // Cheking if event already exists (deduplication)
-            if(eventRepository.existsByEventId(event.getEventId())){
+            if (eventRepository.existsByEventId(event.getEventId())) {
                 logger.warn("Event already exists in database, skipping: eventId={}",
                         event.getEventId());
                 acknowledgment.acknowledge();
                 return;
             }
 
-            //Saving to db
+            // Saving to db
             Event savedEvent = eventRepository.save(event);
 
-            //Sending data to metrics i.e sending to analytics service
+            // Sending data to metrics i.e sending to analytics service
             EventMapper eventMapper = new EventMapper();
             EventDto eventDto = eventMapper.toDto(savedEvent);
+
+            // Record to distributed metrics (Redis + TimescaleDB) if enabled
+            if (metricsProperties.getDistributed().isEnabled()) {
+                distributedMetricsService.recordEvent(eventDto);
+            }
+            // Always record to old service for backward compatibility during migration
             comprehensiveMetricsService.recordEvent(eventDto);
 
             logger.info("Successfully saved event to database: eventId={}, dbId={}",
@@ -84,7 +97,7 @@ public class EventConsumer {
             // Manually acknowledge (commit offset) ... message won't be reprocessed
             acknowledgment.acknowledge();
 
-        }catch (Exception e){
+        } catch (Exception e) {
 
             logger.error("Error processing event from Kafka: partition={}, offset={}, error={}",
                     partition, offset, e.getMessage(), e);
@@ -96,15 +109,14 @@ public class EventConsumer {
         }
     }
 
-
-    //Optional: Listen to errors
-//    @org.springframework.kafka.annotation.KafkaListener(
-//            topics = "${eventara.kafka.topics.events-raw}",
-//            groupId = "${spring.kafka.consumer.group-id}-error",
-//            containerFactory = "kafkaListenerContainerFactory",
-//            errorHandler = "kafkaErrorHandler"
-//    )
-//    public void handleErrors(Exception exception) {
-//        logger.error("Kafka consumer error: {}", exception.getMessage(), exception);
-//    }
+    // Optional: Listen to errors
+    // @org.springframework.kafka.annotation.KafkaListener(
+    // topics = "${eventara.kafka.topics.events-raw}",
+    // groupId = "${spring.kafka.consumer.group-id}-error",
+    // containerFactory = "kafkaListenerContainerFactory",
+    // errorHandler = "kafkaErrorHandler"
+    // )
+    // public void handleErrors(Exception exception) {
+    // logger.error("Kafka consumer error: {}", exception.getMessage(), exception);
+    // }
 }

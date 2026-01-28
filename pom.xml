@@ -87,6 +87,12 @@
 			<artifactId>spring-boot-starter-websocket</artifactId>
 		</dependency>
 
+		<!-- Redis Support (for distributed metrics) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
 		<!-- Drools Dependencies -->
 		<dependency>
 			<groupId>org.drools</groupId>

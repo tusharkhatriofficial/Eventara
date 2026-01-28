@@ -1,0 +1,314 @@
+package com.eventara.metrics.service;
+
+import com.eventara.common.dto.EventDto;
+import com.eventara.metrics.config.MetricsProperties;
+import com.eventara.metrics.model.MetricsBucket;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Redis-based metrics storage for real-time data.
+ * Uses time-bucketed keys with TTL for automatic expiry.
+ * 
+ * Key structure:
+ * - metrics:bucket:{bucketTimestamp}:events - total event count
+ * - metrics:bucket:{bucketTimestamp}:errors - total error count
+ * - metrics:bucket:{bucketTimestamp}:latency - latency sum and count
+ * - metrics:bucket:{bucketTimestamp}:source:{name} - per-source metrics
+ * - metrics:bucket:{bucketTimestamp}:type:{name} - per-type metrics
+ * - metrics:latencies:{bucketTimestamp} - sorted set for percentiles
+ */
+@Service
+public class RedisMetricsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(RedisMetricsService.class);
+
+    private static final String BUCKET_PREFIX = "metrics:bucket:";
+    private static final String LATENCIES_PREFIX = "metrics:latencies:";
+    private static final String FIELD_EVENTS = "events";
+    private static final String FIELD_ERRORS = "errors";
+    private static final String FIELD_LATENCY_SUM = "latency_sum";
+    private static final String FIELD_LATENCY_COUNT = "latency_count";
+    private static final String FIELD_LATENCY_MIN = "latency_min";
+    private static final String FIELD_LATENCY_MAX = "latency_max";
+
+    @Autowired
+    private RedisTemplate<String, String> stringRedisTemplate;
+
+    @Autowired
+    private MetricsProperties metricsProperties;
+
+    /**
+     * Record an event in the current time bucket.
+     * Uses atomic Redis operations for thread-safety across instances.
+     */
+    public void recordEvent(EventDto event) {
+        try {
+            long now = System.currentTimeMillis();
+            long bucketStart = getBucketStart(now);
+            String bucketKey = BUCKET_PREFIX + bucketStart;
+
+            long ttlSeconds = metricsProperties.getBucket().getRedisRetentionHours() * 3600;
+
+            // Atomic increment for total events
+            stringRedisTemplate.opsForHash().increment(bucketKey, FIELD_EVENTS, 1);
+
+            // Track errors
+            if (event.isError()) {
+                stringRedisTemplate.opsForHash().increment(bucketKey, FIELD_ERRORS, 1);
+            }
+
+            // Track latency
+            long latency = event.getProcessingLatencyMs();
+            if (latency > 0) {
+                stringRedisTemplate.opsForHash().increment(bucketKey, FIELD_LATENCY_SUM, latency);
+                stringRedisTemplate.opsForHash().increment(bucketKey, FIELD_LATENCY_COUNT, 1);
+
+                // Update min/max
+                updateMinMax(bucketKey, latency);
+
+                // Add to sorted set for percentile calculation
+                String latencyKey = LATENCIES_PREFIX + bucketStart;
+                stringRedisTemplate.opsForZSet().add(latencyKey, String.valueOf(latency), latency);
+                stringRedisTemplate.expire(latencyKey, ttlSeconds, TimeUnit.SECONDS);
+            }
+
+            // Track by source
+            if (event.getSource() != null) {
+                String sourceKey = bucketKey + ":source:" + event.getSource();
+                stringRedisTemplate.opsForHash().increment(sourceKey, FIELD_EVENTS, 1);
+                if (event.isError()) {
+                    stringRedisTemplate.opsForHash().increment(sourceKey, FIELD_ERRORS, 1);
+                }
+                if (latency > 0) {
+                    stringRedisTemplate.opsForHash().increment(sourceKey, FIELD_LATENCY_SUM, latency);
+                    stringRedisTemplate.opsForHash().increment(sourceKey, FIELD_LATENCY_COUNT, 1);
+                }
+                stringRedisTemplate.expire(sourceKey, ttlSeconds, TimeUnit.SECONDS);
+            }
+
+            // Track by event type
+            if (event.getEventType() != null) {
+                String typeKey = bucketKey + ":type:" + event.getEventType();
+                stringRedisTemplate.opsForHash().increment(typeKey, FIELD_EVENTS, 1);
+                if (latency > 0) {
+                    stringRedisTemplate.opsForHash().increment(typeKey, FIELD_LATENCY_SUM, latency);
+                    stringRedisTemplate.opsForHash().increment(typeKey, FIELD_LATENCY_COUNT, 1);
+                }
+                stringRedisTemplate.expire(typeKey, ttlSeconds, TimeUnit.SECONDS);
+            }
+
+            // Track by severity
+            if (event.getSeverity() != null) {
+                String severityKey = bucketKey + ":severity";
+                stringRedisTemplate.opsForHash().increment(severityKey, event.getSeverity(), 1);
+                stringRedisTemplate.expire(severityKey, ttlSeconds, TimeUnit.SECONDS);
+            }
+
+            // Set TTL on main bucket
+            stringRedisTemplate.expire(bucketKey, ttlSeconds, TimeUnit.SECONDS);
+
+            logger.debug("Recorded event in bucket {}: type={}, source={}",
+                    bucketStart, event.getEventType(), event.getSource());
+
+        } catch (Exception e) {
+            logger.error("Failed to record event to Redis: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Get aggregated metrics for a time window.
+     */
+    public MetricsBucket getMetrics(Duration window) {
+        long now = System.currentTimeMillis();
+        long windowStart = now - window.toMillis();
+
+        return aggregateBuckets(windowStart, now);
+    }
+
+    /**
+     * Get metrics for the last N minutes.
+     */
+    public MetricsBucket getMetricsLastMinutes(int minutes) {
+        return getMetrics(Duration.ofMinutes(minutes));
+    }
+
+    /**
+     * Get all buckets in a time range (for rollup to TimescaleDB).
+     */
+    public List<MetricsBucket> getBuckets(Instant start, Instant end) {
+        List<MetricsBucket> buckets = new ArrayList<>();
+        long bucketSizeMs = metricsProperties.getBucketSizeMs();
+
+        for (long t = start.toEpochMilli(); t < end.toEpochMilli(); t += bucketSizeMs) {
+            MetricsBucket bucket = getBucket(t);
+            if (bucket.getTotalEvents() > 0) {
+                buckets.add(bucket);
+            }
+        }
+
+        return buckets;
+    }
+
+    /**
+     * Get a single bucket by its start timestamp.
+     */
+    private MetricsBucket getBucket(long bucketStart) {
+        String bucketKey = BUCKET_PREFIX + bucketStart;
+        long bucketSizeMs = metricsProperties.getBucketSizeMs();
+
+        MetricsBucket bucket = new MetricsBucket(
+                Instant.ofEpochMilli(bucketStart),
+                Instant.ofEpochMilli(bucketStart + bucketSizeMs));
+
+        // Get core counters
+        bucket.setTotalEvents(getLongFromHash(bucketKey, FIELD_EVENTS));
+        bucket.setTotalErrors(getLongFromHash(bucketKey, FIELD_ERRORS));
+        bucket.setLatencySum(getLongFromHash(bucketKey, FIELD_LATENCY_SUM));
+        bucket.setLatencyCount(getLongFromHash(bucketKey, FIELD_LATENCY_COUNT));
+        bucket.setLatencyMin(getLongFromHashOrNull(bucketKey, FIELD_LATENCY_MIN));
+        bucket.setLatencyMax(getLongFromHashOrNull(bucketKey, FIELD_LATENCY_MAX));
+
+        // Calculate percentiles from sorted set
+        String latencyKey = LATENCIES_PREFIX + bucketStart;
+        Long size = stringRedisTemplate.opsForZSet().size(latencyKey);
+        if (size != null && size > 0) {
+            bucket.setLatencyP50(getPercentile(latencyKey, size, 0.50));
+            bucket.setLatencyP95(getPercentile(latencyKey, size, 0.95));
+            bucket.setLatencyP99(getPercentile(latencyKey, size, 0.99));
+        }
+
+        return bucket;
+    }
+
+    /**
+     * Aggregate all buckets in a time range.
+     */
+    private MetricsBucket aggregateBuckets(long startMs, long endMs) {
+        MetricsBucket result = new MetricsBucket(
+                Instant.ofEpochMilli(startMs),
+                Instant.ofEpochMilli(endMs));
+
+        long bucketSizeMs = metricsProperties.getBucketSizeMs();
+        long bucketStart = getBucketStart(startMs);
+
+        List<Long> allLatencies = new ArrayList<>();
+
+        for (long t = bucketStart; t <= endMs; t += bucketSizeMs) {
+            MetricsBucket bucket = getBucket(t);
+
+            result.setTotalEvents(result.getTotalEvents() + bucket.getTotalEvents());
+            result.setTotalErrors(result.getTotalErrors() + bucket.getTotalErrors());
+            result.setLatencySum(result.getLatencySum() + bucket.getLatencySum());
+            result.setLatencyCount(result.getLatencyCount() + bucket.getLatencyCount());
+
+            // Track min/max
+            if (bucket.getLatencyMin() != null) {
+                if (result.getLatencyMin() == null || bucket.getLatencyMin() < result.getLatencyMin()) {
+                    result.setLatencyMin(bucket.getLatencyMin());
+                }
+            }
+            if (bucket.getLatencyMax() != null) {
+                if (result.getLatencyMax() == null || bucket.getLatencyMax() > result.getLatencyMax()) {
+                    result.setLatencyMax(bucket.getLatencyMax());
+                }
+            }
+
+            // Collect latencies for percentile calculation
+            String latencyKey = LATENCIES_PREFIX + t;
+            Set<String> latencies = stringRedisTemplate.opsForZSet().range(latencyKey, 0, -1);
+            if (latencies != null) {
+                for (String l : latencies) {
+                    try {
+                        allLatencies.add(Long.parseLong(l));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+
+        // Calculate percentiles from combined latencies
+        if (!allLatencies.isEmpty()) {
+            Collections.sort(allLatencies);
+            int size = allLatencies.size();
+            result.setLatencyP50((double) allLatencies.get((int) (size * 0.50)));
+            result.setLatencyP95((double) allLatencies.get((int) (size * 0.95)));
+            result.setLatencyP99((double) allLatencies.get(Math.min((int) (size * 0.99), size - 1)));
+        }
+
+        return result;
+    }
+
+    /**
+     * Calculate bucket start timestamp (aligned to bucket size).
+     */
+    private long getBucketStart(long timestamp) {
+        long bucketSizeMs = metricsProperties.getBucketSizeMs();
+        return (timestamp / bucketSizeMs) * bucketSizeMs;
+    }
+
+    /**
+     * Update min/max latency atomically.
+     */
+    private void updateMinMax(String bucketKey, long latency) {
+        // Get current min
+        Long currentMin = getLongFromHashOrNull(bucketKey, FIELD_LATENCY_MIN);
+        if (currentMin == null || latency < currentMin) {
+            stringRedisTemplate.opsForHash().put(bucketKey, FIELD_LATENCY_MIN, String.valueOf(latency));
+        }
+
+        // Get current max
+        Long currentMax = getLongFromHashOrNull(bucketKey, FIELD_LATENCY_MAX);
+        if (currentMax == null || latency > currentMax) {
+            stringRedisTemplate.opsForHash().put(bucketKey, FIELD_LATENCY_MAX, String.valueOf(latency));
+        }
+    }
+
+    /**
+     * Get percentile value from sorted set.
+     */
+    private Double getPercentile(String key, long size, double percentile) {
+        long index = (long) (size * percentile);
+        Set<String> result = stringRedisTemplate.opsForZSet().range(key, index, index);
+        if (result != null && !result.isEmpty()) {
+            try {
+                return Double.parseDouble(result.iterator().next());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private long getLongFromHash(String key, String field) {
+        Object value = stringRedisTemplate.opsForHash().get(key, field);
+        if (value != null) {
+            try {
+                return Long.parseLong(value.toString());
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+        return 0;
+    }
+
+    private Long getLongFromHashOrNull(String key, String field) {
+        Object value = stringRedisTemplate.opsForHash().get(key, field);
+        if (value != null) {
+            try {
+                return Long.parseLong(value.toString());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+}
