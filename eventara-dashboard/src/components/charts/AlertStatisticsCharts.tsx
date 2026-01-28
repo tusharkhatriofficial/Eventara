@@ -1,10 +1,6 @@
 import { Pie, Bar } from 'react-chartjs-2';
 import { AnomalyAlert } from '../../types';
 
-interface AlertStatisticsChartsProps {
-  anomalies: AnomalyAlert[];
-}
-
 export const AlertSeverityChart: React.FC<{ anomalies: AnomalyAlert[] }> = ({ anomalies }) => {
   const criticalCount = anomalies.filter(a => a.severity === 'critical').length;
   const warningCount = anomalies.filter(a => a.severity === 'warning').length;

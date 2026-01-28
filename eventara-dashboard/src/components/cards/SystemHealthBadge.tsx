@@ -1,47 +1,68 @@
 interface SystemHealthBadgeProps {
-  health: 'healthy' | 'degraded' | 'critical';
+  health: 'healthy' | 'degraded' | 'critical' | string;
 }
 
 export const SystemHealthBadge: React.FC<SystemHealthBadgeProps> = ({ health }) => {
-  const config = {
-    healthy: {
-      bg: 'bg-green-100',
-      text: 'text-green-800',
-      border: 'border-green-200',
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
-      )
-    },
-    degraded: {
-      bg: 'bg-yellow-100',
-      text: 'text-yellow-800',
-      border: 'border-yellow-200',
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-        </svg>
-      )
-    },
-    critical: {
-      bg: 'bg-red-100',
-      text: 'text-red-800',
-      border: 'border-red-200',
-      icon: (
-        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-        </svg>
-      )
+  const getHealthConfig = () => {
+    switch (health.toLowerCase()) {
+      case 'healthy':
+        return {
+          label: 'Healthy',
+          bgColor: 'bg-success-50',
+          textColor: 'text-success-700',
+          dotColor: 'bg-success-500',
+          ringColor: 'ring-success-500/20',
+        };
+      case 'degraded':
+        return {
+          label: 'Degraded',
+          bgColor: 'bg-warning-50',
+          textColor: 'text-warning-700',
+          dotColor: 'bg-warning-500',
+          ringColor: 'ring-warning-500/20',
+        };
+      case 'critical':
+        return {
+          label: 'Critical',
+          bgColor: 'bg-error-50',
+          textColor: 'text-error-700',
+          dotColor: 'bg-error-500',
+          ringColor: 'ring-error-500/20',
+        };
+      default:
+        return {
+          label: health,
+          bgColor: 'bg-slate-50',
+          textColor: 'text-slate-700',
+          dotColor: 'bg-slate-500',
+          ringColor: 'ring-slate-500/20',
+        };
     }
   };
 
-  const { bg, text, border, icon } = config[health];
+  const config = getHealthConfig();
 
   return (
-    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border ${bg} ${text} ${border}`}>
-      {icon}
-      <span className="font-semibold capitalize">{health}</span>
+    <div className={`
+      inline-flex items-center gap-2 px-4 py-2 rounded-full
+      ${config.bgColor} ring-1 ${config.ringColor}
+      transition-all duration-200 hover:shadow-sm
+    `}>
+      <span className={`
+        relative flex h-2.5 w-2.5
+      `}>
+        <span className={`
+          animate-ping absolute inline-flex h-full w-full rounded-full opacity-75
+          ${config.dotColor}
+        `}></span>
+        <span className={`
+          relative inline-flex rounded-full h-2.5 w-2.5
+          ${config.dotColor}
+        `}></span>
+      </span>
+      <span className={`text-sm font-semibold ${config.textColor}`}>
+        {config.label}
+      </span>
     </div>
   );
 };

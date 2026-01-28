@@ -36,10 +36,6 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ metrics }) => {
     ? eventTypes.reduce((min, curr) => (curr[1].avgLatency < min[1].avgLatency ? curr : min))
     : null;
 
-  const slowestEvent = eventTypes.length > 0
-    ? eventTypes.reduce((max, curr) => (curr[1].avgLatency > max[1].avgLatency ? curr : max))
-    : null;
-
   const avgLatencyAcrossAll = eventTypes.length > 0
     ? eventTypes.reduce((sum, [, data]) => sum + data.avgLatency, 0) / eventTypes.length
     : 0;
@@ -124,7 +120,7 @@ export const EventAnalytics: React.FC<EventAnalyticsProps> = ({ metrics }) => {
           title="Average Latency"
           value={`${avgLatencyAcrossAll.toFixed(1)} ms`}
           description="Across all event types"
-          color="yellow"  
+          color="yellow"
           icon={
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

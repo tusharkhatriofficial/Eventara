@@ -5,90 +5,97 @@ interface ConnectionStatusProps {
   onReconnect: () => void;
 }
 
-export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({ 
-  connectionState, 
-  onReconnect 
+export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
+  connectionState,
+  onReconnect
 }) => {
   const getStatusConfig = () => {
     switch (connectionState) {
       case ConnectionState.CONNECTED:
         return {
-          icon: '',
+          color: 'bg-success-500',
+          pulseColor: 'shadow-success-500/50',
           text: 'Connected',
-          bgColor: 'bg-green-100',
-          textColor: 'text-green-800',
-          dotColor: 'bg-green-500',
-          animate: 'animate-pulse'
+          textColor: 'text-success-700',
+          bgColor: 'bg-success-50',
+          showReconnect: false,
         };
       case ConnectionState.CONNECTING:
         return {
-          icon: '',
-          text: 'Connecting...',
-          bgColor: 'bg-blue-100',
-          textColor: 'text-blue-800',
-          dotColor: 'bg-blue-500',
-          animate: 'animate-pulse'
+          color: 'bg-warning-500',
+          pulseColor: 'shadow-warning-500/50',
+          text: 'Connecting',
+          textColor: 'text-warning-700',
+          bgColor: 'bg-warning-50',
+          showReconnect: false,
         };
       case ConnectionState.RECONNECTING:
         return {
-          icon: '',
-          text: 'Reconnecting...',
-          bgColor: 'bg-yellow-100',
-          textColor: 'text-yellow-800',
-          dotColor: 'bg-yellow-500',
-          animate: 'animate-spin'
+          color: 'bg-warning-500',
+          pulseColor: 'shadow-warning-500/50',
+          text: 'Reconnecting',
+          textColor: 'text-warning-700',
+          bgColor: 'bg-warning-50',
+          showReconnect: false,
         };
       case ConnectionState.DISCONNECTED:
-        return {
-          icon: '',
-          text: 'Disconnected',
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-800',
-          dotColor: 'bg-gray-500',
-          animate: ''
-        };
       case ConnectionState.ERROR:
         return {
-          icon: '',
-          text: 'Connection Error',
-          bgColor: 'bg-red-100',
-          textColor: 'text-red-800',
-          dotColor: 'bg-red-500',
-          animate: ''
+          color: 'bg-error-500',
+          pulseColor: 'shadow-error-500/50',
+          text: 'Disconnected',
+          textColor: 'text-error-700',
+          bgColor: 'bg-error-50',
+          showReconnect: true,
         };
       default:
         return {
-          icon: '❓',
+          color: 'bg-slate-400',
+          pulseColor: 'shadow-slate-400/50',
           text: 'Unknown',
-          bgColor: 'bg-gray-100',
-          textColor: 'text-gray-800',
-          dotColor: 'bg-gray-500',
-          animate: ''
+          textColor: 'text-slate-600',
+          bgColor: 'bg-slate-50',
+          showReconnect: true,
         };
     }
   };
 
   const config = getStatusConfig();
-  const showReconnect = [ConnectionState.DISCONNECTED, ConnectionState.ERROR].includes(connectionState);
+  const isConnecting = connectionState === ConnectionState.CONNECTING ||
+    connectionState === ConnectionState.RECONNECTING;
 
   return (
-    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bgColor}`}>
-      {/* Animated dot */}
-      <div className="relative flex h-2 w-2">
-        <span className={`absolute inline-flex h-full w-full rounded-full ${config.dotColor} opacity-75 ${config.animate}`}></span>
-        <span className={`relative inline-flex rounded-full h-2 w-2 ${config.dotColor}`}></span>
+    <div className={`
+      inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+      ${config.bgColor} ring-1 ring-inset ring-current/10
+      transition-all duration-200
+    `}>
+      <div className="relative flex items-center justify-center">
+        <span className={`
+          w-2 h-2 rounded-full ${config.color}
+          ${isConnecting ? 'animate-pulse' : ''}
+          shadow-lg ${config.pulseColor}
+        `}></span>
+        {connectionState === ConnectionState.CONNECTED && (
+          <span className={`
+            absolute w-2 h-2 rounded-full ${config.color}
+            animate-ping opacity-75
+          `}></span>
+        )}
       </div>
-      
-      {/* Status text */}
-      <span className={`text-xs font-medium ${config.textColor}`}>
-        {config.icon} {config.text}
+
+      <span className={`text-xs font-medium ${config.textColor} hidden sm:inline`}>
+        {config.text}
       </span>
 
-      {/* Reconnect button */}
-      {showReconnect && (
+      {config.showReconnect && (
         <button
           onClick={onReconnect}
-          className="ml-1 text-xs font-medium underline hover:no-underline"
+          className={`
+            text-xs font-medium ${config.textColor} 
+            hover:underline focus:outline-none
+            hidden sm:inline
+          `}
         >
           Retry
         </button>
