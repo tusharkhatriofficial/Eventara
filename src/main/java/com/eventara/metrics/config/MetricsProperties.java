@@ -29,7 +29,7 @@ public class MetricsProperties {
 
     public static class Bucket {
         private int sizeSeconds = 10;
-        private int redisRetentionHours = 1;
+        private int redisRetentionMinutes = 60; // Changed from hours to minutes
         private int timescaleRetentionDays = 30;
 
         public int getSizeSeconds() {
@@ -40,12 +40,12 @@ public class MetricsProperties {
             this.sizeSeconds = sizeSeconds;
         }
 
-        public int getRedisRetentionHours() {
-            return redisRetentionHours;
+        public int getRedisRetentionMinutes() {
+            return redisRetentionMinutes;
         }
 
-        public void setRedisRetentionHours(int redisRetentionHours) {
-            this.redisRetentionHours = redisRetentionHours;
+        public void setRedisRetentionMinutes(int redisRetentionMinutes) {
+            this.redisRetentionMinutes = redisRetentionMinutes;
         }
 
         public int getTimescaleRetentionDays() {
@@ -99,6 +99,6 @@ public class MetricsProperties {
     }
 
     public long getRedisRetentionMs() {
-        return bucket.redisRetentionHours * 60 * 60 * 1000L;
+        return bucket.redisRetentionMinutes * 60 * 1000L;
     }
 }

@@ -56,7 +56,7 @@ public class RedisMetricsService {
             long bucketStart = getBucketStart(now);
             String bucketKey = BUCKET_PREFIX + bucketStart;
 
-            long ttlSeconds = metricsProperties.getBucket().getRedisRetentionHours() * 3600;
+            long ttlSeconds = metricsProperties.getBucket().getRedisRetentionMinutes() * 60;
 
             // Atomic increment for total events
             stringRedisTemplate.opsForHash().increment(bucketKey, FIELD_EVENTS, 1);
@@ -186,6 +186,15 @@ public class RedisMetricsService {
             bucket.setLatencyP99(getPercentile(latencyKey, size, 0.99));
         }
 
+        // Load per-source metrics
+        loadSourceMetrics(bucketKey, bucket);
+
+        // Load per-type metrics
+        loadTypeMetrics(bucketKey, bucket);
+
+        // Load severity breakdown
+        loadSeverityMetrics(bucketKey, bucket);
+
         return bucket;
     }
 
@@ -220,6 +229,41 @@ public class RedisMetricsService {
                 if (result.getLatencyMax() == null || bucket.getLatencyMax() > result.getLatencyMax()) {
                     result.setLatencyMax(bucket.getLatencyMax());
                 }
+            }
+
+            // Merge source metrics
+            for (Map.Entry<String, MetricsBucket.SourceMetrics> entry : bucket.getBySource().entrySet()) {
+                String sourceName = entry.getKey();
+                MetricsBucket.SourceMetrics bucketSource = entry.getValue();
+
+                MetricsBucket.SourceMetrics resultSource = result.getBySource()
+                        .computeIfAbsent(sourceName, k -> new MetricsBucket.SourceMetrics());
+
+                resultSource.setEvents(resultSource.getEvents() + bucketSource.getEvents());
+                resultSource.setErrors(resultSource.getErrors() + bucketSource.getErrors());
+                resultSource.setLatencySum(resultSource.getLatencySum() + bucketSource.getLatencySum());
+                resultSource.setLatencyCount(resultSource.getLatencyCount() + bucketSource.getLatencyCount());
+            }
+
+            // Merge type metrics
+            for (Map.Entry<String, MetricsBucket.TypeMetrics> entry : bucket.getByEventType().entrySet()) {
+                String typeName = entry.getKey();
+                MetricsBucket.TypeMetrics bucketType = entry.getValue();
+
+                MetricsBucket.TypeMetrics resultType = result.getByEventType()
+                        .computeIfAbsent(typeName, k -> new MetricsBucket.TypeMetrics());
+
+                resultType.setCount(resultType.getCount() + bucketType.getCount());
+                resultType.setLatencySum(resultType.getLatencySum() + bucketType.getLatencySum());
+                resultType.setLatencyCount(resultType.getLatencyCount() + bucketType.getLatencyCount());
+            }
+
+            // Merge severity counts
+            for (Map.Entry<String, Long> entry : bucket.getBySeverity().entrySet()) {
+                String severity = entry.getKey();
+                Long count = entry.getValue();
+
+                result.getBySeverity().merge(severity, count, Long::sum);
             }
 
             // Collect latencies for percentile calculation
@@ -310,5 +354,84 @@ public class RedisMetricsService {
             }
         }
         return null;
+    }
+
+    /**
+     * Load per-source metrics from Redis keys.
+     */
+    private void loadSourceMetrics(String bucketKey, MetricsBucket bucket) {
+        try {
+            // Scan for all source keys: metrics:bucket:{timestamp}:source:*
+            String pattern = bucketKey + ":source:*";
+            Set<String> keys = stringRedisTemplate.keys(pattern);
+
+            if (keys != null) {
+                for (String key : keys) {
+                    // Extract source name from key
+                    String sourceName = key.substring(key.lastIndexOf(":source:") + 8);
+
+                    MetricsBucket.SourceMetrics sourceMetrics = new MetricsBucket.SourceMetrics();
+                    sourceMetrics.setEvents(getLongFromHash(key, FIELD_EVENTS));
+                    sourceMetrics.setErrors(getLongFromHash(key, FIELD_ERRORS));
+                    sourceMetrics.setLatencySum(getLongFromHash(key, FIELD_LATENCY_SUM));
+                    sourceMetrics.setLatencyCount(getLongFromHash(key, FIELD_LATENCY_COUNT));
+
+                    bucket.getBySource().put(sourceName, sourceMetrics);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to load source metrics for bucket {}: {}", bucketKey, e.getMessage());
+        }
+    }
+
+    /**
+     * Load per-type metrics from Redis keys.
+     */
+    private void loadTypeMetrics(String bucketKey, MetricsBucket bucket) {
+        try {
+            // Scan for all type keys: metrics:bucket:{timestamp}:type:*
+            String pattern = bucketKey + ":type:*";
+            Set<String> keys = stringRedisTemplate.keys(pattern);
+
+            if (keys != null) {
+                for (String key : keys) {
+                    // Extract type name from key
+                    String typeName = key.substring(key.lastIndexOf(":type:") + 6);
+
+                    MetricsBucket.TypeMetrics typeMetrics = new MetricsBucket.TypeMetrics();
+                    typeMetrics.setCount(getLongFromHash(key, FIELD_EVENTS));
+                    typeMetrics.setLatencySum(getLongFromHash(key, FIELD_LATENCY_SUM));
+                    typeMetrics.setLatencyCount(getLongFromHash(key, FIELD_LATENCY_COUNT));
+
+                    bucket.getByEventType().put(typeName, typeMetrics);
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to load type metrics for bucket {}: {}", bucketKey, e.getMessage());
+        }
+    }
+
+    /**
+     * Load severity breakdown from Redis.
+     */
+    private void loadSeverityMetrics(String bucketKey, MetricsBucket bucket) {
+        try {
+            String severityKey = bucketKey + ":severity";
+            Map<Object, Object> severityData = stringRedisTemplate.opsForHash().entries(severityKey);
+
+            if (severityData != null) {
+                for (Map.Entry<Object, Object> entry : severityData.entrySet()) {
+                    String severity = entry.getKey().toString();
+                    try {
+                        long count = Long.parseLong(entry.getValue().toString());
+                        bucket.getBySeverity().put(severity, count);
+                    } catch (NumberFormatException e) {
+                        logger.warn("Invalid severity count for {}: {}", severity, entry.getValue());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to load severity metrics for bucket {}: {}", bucketKey, e.getMessage());
+        }
     }
 }
