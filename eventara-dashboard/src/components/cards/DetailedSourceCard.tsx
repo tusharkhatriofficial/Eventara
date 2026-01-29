@@ -33,7 +33,9 @@ export const DetailedSourceCard: React.FC<DetailedSourceCardProps> = ({
     }
   };
 
-  const config = healthConfig[metrics.health];
+  // Defensive: fallback to healthy if health is undefined or not in config
+  const healthKey = (metrics?.health || 'healthy') as keyof typeof healthConfig;
+  const config = healthConfig[healthKey] || healthConfig.healthy;
 
   return (
     <div className={`bg-white rounded-lg shadow-sm border-2 ${config.border} hover:shadow-md transition-shadow`}>
@@ -62,11 +64,10 @@ export const DetailedSourceCard: React.FC<DetailedSourceCardProps> = ({
           {/* Average Latency */}
           <div>
             <p className="text-xs text-gray-600 mb-1">Avg Latency</p>
-            <p className={`text-2xl font-bold ${
-              metrics.avgLatency < 100 ? 'text-green-600' :
-              metrics.avgLatency < 500 ? 'text-yellow-600' :
-              'text-red-600'
-            }`}>
+            <p className={`text-2xl font-bold ${metrics.avgLatency < 100 ? 'text-green-600' :
+                metrics.avgLatency < 500 ? 'text-yellow-600' :
+                  'text-red-600'
+              }`}>
               {metrics.avgLatency.toFixed(1)} <span className="text-sm">ms</span>
             </p>
           </div>
@@ -80,11 +81,10 @@ export const DetailedSourceCard: React.FC<DetailedSourceCardProps> = ({
           {/* Error Rate */}
           <div>
             <p className="text-xs text-gray-600 mb-1">Error Rate</p>
-            <p className={`text-2xl font-bold ${
-              metrics.errorRate < 1 ? 'text-green-600' :
-              metrics.errorRate < 5 ? 'text-yellow-600' :
-              'text-red-600'
-            }`}>
+            <p className={`text-2xl font-bold ${metrics.errorRate < 1 ? 'text-green-600' :
+                metrics.errorRate < 5 ? 'text-yellow-600' :
+                  'text-red-600'
+              }`}>
               {metrics.errorRate.toFixed(1)} <span className="text-sm">%</span>
             </p>
           </div>
@@ -98,11 +98,10 @@ export const DetailedSourceCard: React.FC<DetailedSourceCardProps> = ({
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className={`h-2 rounded-full ${
-                metrics.errorRate < 1 ? 'bg-green-500' :
-                metrics.errorRate < 5 ? 'bg-yellow-500' :
-                'bg-red-500'
-              }`}
+              className={`h-2 rounded-full ${metrics.errorRate < 1 ? 'bg-green-500' :
+                  metrics.errorRate < 5 ? 'bg-yellow-500' :
+                    'bg-red-500'
+                }`}
               style={{ width: `${Math.max(0, 100 - metrics.errorRate)}%` }}
             ></div>
           </div>

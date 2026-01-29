@@ -2,6 +2,8 @@ package com.eventara.analytics.controller;
 
 import com.eventara.analytics.service.ComprehensiveMetricsService;
 import com.eventara.common.dto.ComprehensiveMetricsDto;
+import com.eventara.metrics.config.MetricsProperties;
+import com.eventara.metrics.service.DistributedMetricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +24,12 @@ public class MetricsWebSocketController {
     private ComprehensiveMetricsService metricsService;
 
     @Autowired
+    private DistributedMetricsService distributedMetricsService;
+
+    @Autowired
+    private MetricsProperties metricsProperties;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -30,13 +38,17 @@ public class MetricsWebSocketController {
     @Scheduled(fixedRate = 1000) // Every 1 second
     public void pushMetrics() {
         try {
-            ComprehensiveMetricsDto metrics = metricsService.getComprehensiveMetrics();
+            // Use distributed metrics if enabled, otherwise fall back to old service
+            ComprehensiveMetricsDto metrics = metricsProperties.getDistributed().isEnabled()
+                    ? distributedMetricsService.getComprehensiveMetrics()
+                    : metricsService.getComprehensiveMetrics();
 
             // Push to all subscribers of /topic/metrics
             messagingTemplate.convertAndSend("/topic/metrics", metrics);
 
-            logger.debug("Pushed metrics to WebSocket clients: {} total events",
-                    metrics.getSummary().getTotalEvents());
+            logger.debug("Pushed metrics to WebSocket clients: {} total events (using {})",
+                    metrics.getSummary().getTotalEvents(),
+                    metricsProperties.getDistributed().isEnabled() ? "distributed" : "in-memory");
 
         } catch (Exception e) {
             logger.error("Error pushing metrics via WebSocket", e);
@@ -50,6 +62,8 @@ public class MetricsWebSocketController {
     @SendTo("/topic/metrics")
     public ComprehensiveMetricsDto subscribeToMetrics() {
         logger.info("Client subscribed to metrics");
-        return metricsService.getComprehensiveMetrics();
+        return metricsProperties.getDistributed().isEnabled()
+                ? distributedMetricsService.getComprehensiveMetrics()
+                : metricsService.getComprehensiveMetrics();
     }
 }
