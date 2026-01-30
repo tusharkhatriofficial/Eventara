@@ -102,9 +102,6 @@ export const RuleEditor: React.FC = () => {
       if (!cfg || !cfg.metricType) throw new Error('metricType is required');
       if (!cfg.condition) throw new Error('condition is required');
       if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
-      if (cfg.timeWindowMinutes !== undefined && (!Number.isInteger(cfg.timeWindowMinutes) || cfg.timeWindowMinutes <= 0)) {
-        throw new Error('timeWindowMinutes must be a positive integer');
-      }
 
       const payload: TestRuleRequest = {
         ruleType: (form as any).ruleType,
@@ -130,9 +127,6 @@ export const RuleEditor: React.FC = () => {
       if (!cfg || !cfg.metricType) throw new Error('metricType is required');
       if (!cfg.condition) throw new Error('condition is required');
       if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
-      if (cfg.timeWindowMinutes !== undefined && (!Number.isInteger(cfg.timeWindowMinutes) || cfg.timeWindowMinutes <= 0)) {
-        throw new Error('timeWindowMinutes must be a positive integer');
-      }
 
       const payload: CreateRuleRequest | UpdateRuleRequest = {
         ...(form as any),
@@ -1068,22 +1062,7 @@ export const RuleEditor: React.FC = () => {
                 </>
               )}
 
-              {/* Common Fields for All Modes */}
-              <div>
-                <label className="block text-sm font-semibold text-dark-700 mb-2">Time Window (minutes)</label>
-                <input
-                  type="number"
-                  min={1}
-                  className="input-modern"
-                  placeholder="e.g., 5"
-                  value={(form as any).ruleConfig?.timeWindowMinutes || ''}
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, timeWindowMinutes: e.target.value ? Number(e.target.value) : undefined })}
-                />
-                <p className="text-xs text-dark-500 mt-2">
-                  Evaluation time window. For rate-of-change rules, previous window has same duration.
-                </p>
-              </div>
-
+              {/* Common Fields for All Modes - Time Window removed, rules are now evaluated in real-time */}
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2 flex items-center gap-2">
                   Cooldown Period (minutes)
@@ -1112,7 +1091,7 @@ export const RuleEditor: React.FC = () => {
               <label className="block text-sm font-semibold text-dark-700 mb-2">Rule Config (JSON)</label>
               <textarea
                 className="input-modern font-mono text-sm min-h-[400px] resize-none"
-                placeholder='{\n  "metricType": "ERROR_RATE",\n  "condition": "GREATER_THAN",\n  "thresholdValue": "5.0",\n  "timeWindowMinutes": 5\n}'
+                placeholder='{\n  "metricType": "ERROR_RATE",\n  "condition": "GREATER_THAN",\n  "thresholdValue": "5.0",\n  "cooldownMinutes": 5\n}'
                 value={jsonText}
                 onChange={(e) => setJsonText(e.target.value)}
               />
