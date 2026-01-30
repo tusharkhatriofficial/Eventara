@@ -7,10 +7,24 @@ import type { NotificationChannel } from '../types/notifications';
 
 // Options derived from backend enums (kept in sync with src/main/java/com/eventara/rule/enums)
 const METRIC_TYPES: MetricType[] = [
-  'ERROR_RATE', 'TOTAL_ERRORS', 'AVG_LATENCY', 'P50_LATENCY', 'P95_LATENCY', 'P99_LATENCY', 'MAX_LATENCY', 'MIN_LATENCY',
+  // Error Metrics
+  'ERROR_RATE', 'TOTAL_ERRORS', 'SOURCE_ERROR_RATE',
+  // Performance Metrics
+  'AVG_LATENCY', 'P50_LATENCY', 'P95_LATENCY', 'P99_LATENCY', 'MAX_LATENCY', 'MIN_LATENCY',
+  // Throughput Metrics
   'EVENTS_PER_SECOND', 'EVENTS_PER_MINUTE', 'EVENTS_PER_HOUR', 'EVENTS_PER_DAY', 'PEAK_THROUGHPUT', 'AVG_THROUGHPUT_1H', 'AVG_THROUGHPUT_24H',
+  // Time Window Metrics
   'EVENTS_LAST_1_MINUTE', 'EVENTS_LAST_5_MINUTES', 'EVENTS_LAST_15_MINUTES', 'EVENTS_LAST_1_HOUR', 'EVENTS_LAST_24_HOURS', 'TOTAL_EVENTS',
-  'UNIQUE_SOURCES', 'UNIQUE_EVENT_TYPES', 'UNIQUE_USERS', 'SYSTEM_HEALTH', 'ACTIVE_USERS_LAST_1_HOUR', 'ACTIVE_USERS_LAST_24_HOURS', 'TOTAL_UNIQUE_USERS'
+  // Summary Metrics
+  'UNIQUE_SOURCES', 'UNIQUE_EVENT_TYPES', 'UNIQUE_USERS', 'SYSTEM_HEALTH',
+  // User Metrics
+  'ACTIVE_USERS_LAST_1_HOUR', 'ACTIVE_USERS_LAST_24_HOURS', 'TOTAL_UNIQUE_USERS',
+  // Phase 1: Source/Type Specific
+  'EVENT_TYPE_COUNT',
+  // Phase 2: Ratios
+  'EVENT_RATIO',
+  // Phase 3: Rate of Change
+  'ERROR_RATE_CHANGE', 'LATENCY_CHANGE', 'THROUGHPUT_CHANGE', 'SPIKE_DETECTION'
 ];
 
 const CONDITIONS: Condition[] = [
@@ -38,6 +52,7 @@ export const RuleEditor: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isTestOpen, setIsTestOpen] = useState(false);
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
+  const [advancedMode, setAdvancedMode] = useState<'simple' | 'composite' | 'ratio' | 'change'>('simple');
 
   useEffect(() => {
     if (isEdit && id) fetchRule(Number(id));
@@ -151,6 +166,73 @@ export const RuleEditor: React.FC = () => {
       return next;
     });
   }
+
+  // Helper functions for composite conditions
+  function addCondition() {
+    const conditions = (form as any).ruleConfig?.conditions || [];
+    onField('ruleConfig', {
+      ...(form as any).ruleConfig,
+      conditions: [...conditions, { metricType: '', condition: '', value: 0 }]
+    });
+  }
+
+  function removeCondition(index: number) {
+    const conditions = (form as any).ruleConfig?.conditions || [];
+    onField('ruleConfig', {
+      ...(form as any).ruleConfig,
+      conditions: conditions.filter((_: any, i: number) => i !== index)
+    });
+  }
+
+  function updateCondition(index: number, field: string, value: any) {
+    const conditions = [...((form as any).ruleConfig?.conditions || [])];
+    conditions[index] = { ...conditions[index], [field]: value };
+    onField('ruleConfig', {
+      ...(form as any).ruleConfig,
+      conditions
+    });
+  }
+
+  // Helper function to add/remove items from arrays (for filters)
+  function addToArray(field: string, value: string) {
+    const current = (form as any).ruleConfig?.[field] || [];
+    if (value && !current.includes(value)) {
+      onField('ruleConfig', {
+        ...(form as any).ruleConfig,
+        [field]: [...current, value]
+      });
+    }
+  }
+
+  function removeFromArray(field: string, value: string) {
+    const current = (form as any).ruleConfig?.[field] || [];
+    onField('ruleConfig', {
+      ...(form as any).ruleConfig,
+      [field]: current.filter((v: string) => v !== value)
+    });
+  }
+
+  // Detect advanced mode from loaded config
+  useEffect(() => {
+    const config = (form as any).ruleConfig;
+    if (config) {
+      if (config.conditions && config.operator) {
+        setAdvancedMode('composite');
+      } else if (config.metricType === 'EVENT_RATIO') {
+        setAdvancedMode('ratio');
+      } else if (
+        config.metricType === 'ERROR_RATE_CHANGE' ||
+        config.metricType === 'LATENCY_CHANGE' ||
+        config.metricType === 'THROUGHPUT_CHANGE' ||
+        config.metricType === 'SPIKE_DETECTION'
+      ) {
+        setAdvancedMode('change');
+      } else {
+        setAdvancedMode('simple');
+      }
+    }
+  }, [(form as any).ruleConfig?.metricType, (form as any).ruleConfig?.operator]);
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -506,63 +588,487 @@ export const RuleEditor: React.FC = () => {
 
           {!jsonMode && (
             <div className="space-y-5">
+              {/* Advanced Mode Selector */}
               <div>
-                <label className="block text-sm font-semibold text-dark-700 mb-2">Metric Type *</label>
+                <label className="block text-sm font-semibold text-dark-700 mb-2">Rule Mode</label>
                 <select
                   className="input-modern"
-                  value={(form as any).ruleConfig?.metricType || ''}
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, metricType: e.target.value })}
+                  value={advancedMode}
+                  onChange={(e) => {
+                    setAdvancedMode(e.target.value as any);
+                    // Reset config when changing modes
+                    onField('ruleConfig', {});
+                  }}
                 >
-                  <option value="">Select metric to monitor</option>
-                  {METRIC_TYPES.map((m) => (
-                    <option key={m} value={m}>{m.replaceAll('_', ' ')}</option>
-                  ))}
+                  <option value="simple">Simple Threshold</option>
+                  <option value="composite">Composite (AND/OR)</option>
+                  <option value="ratio">Event Ratio (Conversion Rate)</option>
+                  <option value="change">Rate of Change</option>
                 </select>
-                {!((form as any).ruleConfig?.metricType) && (
-                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Metric type is required
-                  </p>
-                )}
+                <p className="text-xs text-dark-500 mt-2">
+                  {advancedMode === 'simple' && 'Monitor a single metric against a threshold'}
+                  {advancedMode === 'composite' && 'Combine multiple conditions with AND/OR operators'}
+                  {advancedMode === 'ratio' && 'Compare two event types (e.g., success/total for conversion rate)'}
+                  {advancedMode === 'change' && 'Detect % change vs previous window (spike/trend detection)'}
+                </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-dark-700 mb-2">Condition *</label>
-                <select
-                  className="input-modern"
-                  value={(form as any).ruleConfig?.condition || ''}
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, condition: e.target.value })}
-                >
-                  <option value="">Select condition</option>
-                  {CONDITIONS.map((c) => (
-                    <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
-                  ))}
-                </select>
-                {!((form as any).ruleConfig?.condition) && (
-                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Condition is required
-                  </p>
-                )}
-              </div>
+              {/* SIMPLE MODE */}
+              {advancedMode === 'simple' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Metric Type *</label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.metricType || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, metricType: e.target.value })}
+                    >
+                      <option value="">Select metric to monitor</option>
+                      {METRIC_TYPES.filter(m => m !== 'EVENT_RATIO' && !m.includes('_CHANGE') && m !== 'SPIKE_DETECTION').map((m) => (
+                        <option key={m} value={m}>{m.replaceAll('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-dark-700 mb-2">Threshold Value *</label>
-                <input
-                  className="input-modern"
-                  placeholder="e.g., 100, 5.0, or 'high'"
-                  value={(form as any).ruleConfig?.thresholdValue || ''}
-                  onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: e.target.value })}
-                />
-                {((form as any).ruleConfig?.thresholdValue === undefined || (form as any).ruleConfig?.thresholdValue === '') && (
-                  <p className="text-xs text-dark-500 mt-2">The threshold value that triggers the alert</p>
-                )}
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Condition *</label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.condition || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, condition: e.target.value })}
+                    >
+                      <option value="">Select condition</option>
+                      {CONDITIONS.map((c) => (
+                        <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
 
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Threshold Value *</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="input-modern"
+                      placeholder="e.g., 5.0"
+                      value={(form as any).ruleConfig?.thresholdValue || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  {/* Source Filter (Phase 1) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Filter by Source (Optional) <span className="text-xs text-primary-600 font-normal">• Phase 1</span>
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="input-modern flex-1"
+                          placeholder="e.g., auth-service, payment-service"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value.trim();
+                              if (value) {
+                                addToArray('sourceFilter', value);
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {((form as any).ruleConfig?.sourceFilter || []).map((source: string) => (
+                            <span
+                              key={source}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm"
+                            >
+                              {source}
+                              <button
+                                onClick={() => removeFromArray('sourceFilter', source)}
+                                className="hover:text-primary-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-dark-500 mt-2">
+                      Press Enter to add. Leave empty to monitor all sources. Enables source-specific threshold evaluation.
+                    </p>
+                  </div>
+
+                  {/* Event Type Filter (Phase 1) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Filter by Event Type (Optional) <span className="text-xs text-primary-600 font-normal">• Phase 1</span>
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="input-modern flex-1"
+                          placeholder="e.g., user.login, payment.failed"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value.trim();
+                              if (value) {
+                                addToArray('eventTypeFilter', value);
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      {((form as any).ruleConfig?.eventTypeFilter || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {((form as any).ruleConfig?.eventTypeFilter || []).map((type: string) => (
+                            <span
+                              key={type}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-700 rounded-lg text-sm"
+                            >
+                              {type}
+                              <button
+                                onClick={() => removeFromArray('eventTypeFilter', type)}
+                                className="hover:text-purple-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-dark-500 mt-2">
+                      Press Enter to add. Leave empty to monitor all event types.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* COMPOSITE MODE (Phase 2) */}
+              {advancedMode === 'composite' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Operator <span className="text-xs text-primary-600 font-normal">• Phase 2</span>
+                    </label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.operator || 'AND'}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, operator: e.target.value })}
+                    >
+                      <option value="AND">AND (all conditions must be true)</option>
+                      <option value="OR">OR (any condition can be true)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-3">Conditions</label>
+                    <div className="space-y-3">
+                      {((form as any).ruleConfig?.conditions || []).map((cond: any, idx: number) => (
+                        <div key={idx} className="p-4 bg-dark-50 rounded-xl space-y-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-dark-600">Condition {idx + 1}</span>
+                            <button
+                              className="text-red-600 hover:text-red-700 text-sm"
+                              onClick={() => removeCondition(idx)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs font-medium text-dark-600 mb-1">Metric</label>
+                              <select
+                                className="input-modern"
+                                value={cond.metricType || ''}
+                                onChange={(e) => updateCondition(idx, 'metricType', e.target.value)}
+                              >
+                                <option value="">Select</option>
+                                {METRIC_TYPES.filter(m => m !== 'EVENT_RATIO' && !m.includes('_CHANGE') && m !== 'SPIKE_DETECTION').map(m => (
+                                  <option key={m} value={m}>{m.replaceAll('_', ' ')}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-dark-600 mb-1">Condition</label>
+                              <select
+                                className="input-modern"
+                                value={cond.condition || ''}
+                                onChange={(e) => updateCondition(idx, 'condition', e.target.value)}
+                              >
+                                <option value="">Select</option>
+                                {CONDITIONS.map(c => (
+                                  <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-dark-600 mb-1">Value</label>
+                              <input
+                                type="number"
+                                step="any"
+                                className="input-modern"
+                                placeholder="0"
+                                value={cond.value || ''}
+                                onChange={(e) => updateCondition(idx, 'value', parseFloat(e.target.value) || 0)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      className="btn-secondary mt-3 w-full"
+                      onClick={addCondition}
+                    >
+                      + Add Condition
+                    </button>
+                  </div>
+
+                  {/* Source Filter for Composite */}
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Apply to Sources (Optional)
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="input-modern flex-1"
+                          placeholder="e.g., auth-service"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value.trim();
+                              if (value) {
+                                addToArray('sourceFilter', value);
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {((form as any).ruleConfig?.sourceFilter || []).map((source: string) => (
+                            <span
+                              key={source}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm"
+                            >
+                              {source}
+                              <button
+                                onClick={() => removeFromArray('sourceFilter', source)}
+                                className="hover:text-primary-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-dark-500 mt-2">
+                      Filters apply to ALL conditions above
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* EVENT RATIO MODE (Phase 2) */}
+              {advancedMode === 'ratio' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Numerator Event Type * <span className="text-xs text-primary-600 font-normal">• Phase 2</span>
+                    </label>
+                    <input
+                      type="text"
+                      className="input-modern"
+                      placeholder="e.g., user.login.success"
+                      value={(form as any).ruleConfig?.numeratorEventType || ''}
+                      onChange={(e) => onField('ruleConfig', {
+                        ...(form as any).ruleConfig,
+                        metricType: 'EVENT_RATIO',
+                        numeratorEventType: e.target.value
+                      })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Denominator Event Type *</label>
+                    <input
+                      type="text"
+                      className="input-modern"
+                      placeholder="e.g., user.login.attempted"
+                      value={(form as any).ruleConfig?.denominatorEventType || ''}
+                      onChange={(e) => onField('ruleConfig', {
+                        ...(form as any).ruleConfig,
+                        metricType: 'EVENT_RATIO',
+                        denominatorEventType: e.target.value
+                      })}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Condition *</label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.condition || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, condition: e.target.value })}
+                    >
+                      <option value="">Select condition</option>
+                      {CONDITIONS.map((c) => (
+                        <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Ratio Threshold * (0.0 - 1.0)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="1"
+                      className="input-modern"
+                      placeholder="e.g., 0.8 for 80%"
+                      value={(form as any).ruleConfig?.thresholdValue || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: parseFloat(e.target.value) || 0 })}
+                    />
+                    <p className="text-xs text-dark-500 mt-2">
+                      Example: 0.8 = 80% success rate threshold
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Minimum Denominator Events</label>
+                    <input
+                      type="number"
+                      min="1"
+                      className="input-modern"
+                      placeholder="10"
+                      value={(form as any).ruleConfig?.minDenominatorEvents || ''}
+                      onChange={(e) => onField('ruleConfig', {
+                        ...(form as any).ruleConfig,
+                        minDenominatorEvents: parseInt(e.target.value) || 10
+                      })}
+                    />
+                    <p className="text-xs text-dark-500 mt-2">
+                      Minimum events in denominator before evaluation (prevents false positives)
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* RATE OF CHANGE MODE (Phase 3) */}
+              {advancedMode === 'change' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Change Metric Type * <span className="text-xs text-primary-600 font-normal">• Phase 3</span>
+                    </label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.metricType || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, metricType: e.target.value })}
+                    >
+                      <option value="">Select metric</option>
+                      <option value="ERROR_RATE_CHANGE">Error Rate Change</option>
+                      <option value="LATENCY_CHANGE">Latency Change</option>
+                      <option value="THROUGHPUT_CHANGE">Throughput Change</option>
+                      <option value="SPIKE_DETECTION">Traffic Spike Detection</option>
+                    </select>
+                    <p className="text-xs text-dark-500 mt-2">
+                      Compares current window vs previous window of same duration
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">Condition *</label>
+                    <select
+                      className="input-modern"
+                      value={(form as any).ruleConfig?.condition || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, condition: e.target.value })}
+                    >
+                      <option value="">Select condition</option>
+                      {CONDITIONS.map((c) => (
+                        <option key={c} value={c}>{c.replaceAll('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">% Change Threshold *</label>
+                    <input
+                      type="number"
+                      step="any"
+                      className="input-modern"
+                      placeholder="e.g., 50 for +50% increase"
+                      value={(form as any).ruleConfig?.thresholdValue || ''}
+                      onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, thresholdValue: parseFloat(e.target.value) || 0 })}
+                    />
+                    <p className="text-xs text-dark-500 mt-2">
+                      Positive = increase detection, Negative = decrease detection
+                      <br />
+                      <span className="text-primary-600">Example: 50 = alert on +50% increase, -30 = alert on -30% decrease</span>
+                    </p>
+                  </div>
+
+                  {/* Source Filter for Rate of Change */}
+                  <div>
+                    <label className="block text-sm font-semibold text-dark-700 mb-2">
+                      Monitor Specific Source (Optional)
+                    </label>
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          className="input-modern flex-1"
+                          placeholder="e.g., payment-service"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const value = (e.target as HTMLInputElement).value.trim();
+                              if (value) {
+                                addToArray('sourceFilter', value);
+                                (e.target as HTMLInputElement).value = '';
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                      {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {((form as any).ruleConfig?.sourceFilter || []).map((source: string) => (
+                            <span
+                              key={source}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-primary-100 text-primary-700 rounded-lg text-sm"
+                            >
+                              {source}
+                              <button
+                                onClick={() => removeFromArray('sourceFilter', source)}
+                                className="hover:text-primary-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Common Fields for All Modes */}
               <div>
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Time Window (minutes)</label>
                 <input
@@ -573,17 +1079,30 @@ export const RuleEditor: React.FC = () => {
                   value={(form as any).ruleConfig?.timeWindowMinutes || ''}
                   onChange={(e) => onField('ruleConfig', { ...(form as any).ruleConfig, timeWindowMinutes: e.target.value ? Number(e.target.value) : undefined })}
                 />
-                {((form as any).ruleConfig?.timeWindowMinutes !== undefined && ((form as any).ruleConfig?.timeWindowMinutes <= 0 || !Number.isInteger((form as any).ruleConfig?.timeWindowMinutes))) && (
-                  <p className="text-xs text-red-600 mt-2 flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Must be a positive integer
-                  </p>
-                )}
-                {(!((form as any).ruleConfig?.timeWindowMinutes) || ((form as any).ruleConfig?.timeWindowMinutes > 0 && Number.isInteger((form as any).ruleConfig?.timeWindowMinutes))) && (
-                  <p className="text-xs text-dark-500 mt-2">Evaluation time window in minutes</p>
-                )}
+                <p className="text-xs text-dark-500 mt-2">
+                  Evaluation time window. For rate-of-change rules, previous window has same duration.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-dark-700 mb-2 flex items-center gap-2">
+                  Cooldown Period (minutes)
+                  <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded font-normal">✓ Distributed • Phase 4</span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="input-modern"
+                  placeholder="5"
+                  value={(form as any).ruleConfig?.cooldownMinutes || ''}
+                  onChange={(e) => onField('ruleConfig', {
+                    ...(form as any).ruleConfig,
+                    cooldownMinutes: e.target.value ? Number(e.target.value) : undefined
+                  })}
+                />
+                <p className="text-xs text-dark-500 mt-2">
+                  Minimum time between alert triggers (default: 5 minutes). Shared across all backend instances via Redis TTL.
+                </p>
               </div>
             </div>
           )}

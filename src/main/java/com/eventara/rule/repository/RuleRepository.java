@@ -34,6 +34,9 @@ public interface RuleRepository extends JpaRepository<AlertRule, Long> {
     // Find active rules by type
     List<AlertRule> findByStatusAndRuleType(RuleStatus status, RuleType ruleType);
 
+    // Find rules by type and status (for RealTimeRuleEvaluator)
+    List<AlertRule> findByRuleTypeAndStatus(RuleType ruleType, RuleStatus status);
+
     // Find rules by severity
     @Query("SELECT r FROM AlertRule r WHERE r.severity = :severity")
     List<AlertRule> findBySeverity(@Param("severity") String severity);
