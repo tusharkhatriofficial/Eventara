@@ -486,7 +486,7 @@ export const RuleEditor: React.FC = () => {
                 <label className="block text-sm font-semibold text-dark-700 mb-2">Custom Message Template</label>
                 <textarea
                   className="input-modern min-h-[100px] resize-none font-mono text-sm"
-                  placeholder="Override default alert message. Supports variables: {ruleName}, {severity}, {threshold}, {actualValue}"
+                  placeholder="Override default alert message. Use placeholders: {ruleName}, {severity}, {thresholdValue}, {actualValue}, {triggeredAt}"
                   value={(form as any).notificationConfig?.messageTemplate ?? ''}
                   onChange={(e) => onField('notificationConfig', {
                     ...(form as any).notificationConfig,
@@ -494,7 +494,7 @@ export const RuleEditor: React.FC = () => {
                   })}
                 />
                 <p className="text-xs text-dark-500 mt-2">
-                  Leave empty to use default template
+                  💡 Available placeholders: <code className="text-primary-600 bg-primary-50 px-1 rounded">{'{ruleName}'}</code>, <code className="text-primary-600 bg-primary-50 px-1 rounded">{'{severity}'}</code>, <code className="text-primary-600 bg-primary-50 px-1 rounded">{'{thresholdValue}'}</code>, <code className="text-primary-600 bg-primary-50 px-1 rounded">{'{actualValue}'}</code>, <code className="text-primary-600 bg-primary-50 px-1 rounded">{'{triggeredAt}'}</code>
                 </p>
               </div>
 

@@ -64,24 +64,30 @@ public class RealTimeRuleEvaluator {
     public void evaluateEvent(EventDto event) {
         // Get active threshold rules (cached)
         List<AlertRule> rules = getActiveThresholdRules();
+        
+        log.info("🔍 Evaluating event: source={}, type={}, severity={} | {} active threshold rules found", 
+                event.getSource(), event.getEventType(), event.getSeverity(), rules.size());
 
         for (AlertRule rule : rules) {
             try {
                 // Check if rule is configured for instant evaluation
                 if (!isInstantEvaluation(rule)) {
+                    log.debug("Rule '{}' is not instant evaluation, skipping", rule.getName());
                     continue;
                 }
 
                 // Check if event matches rule's filters
                 if (!matchesFilters(rule, event)) {
+                    log.debug("Event does not match filters for rule '{}'", rule.getName());
                     continue;
                 }
 
+                log.info("✅ Evaluating rule '{}' for event {}", rule.getName(), event.getEventId());
                 // Evaluate the threshold
                 evaluateThreshold(rule, event);
 
             } catch (Exception e) {
-                log.error("Error evaluating rule {} for event: {}", rule.getName(), e.getMessage());
+                log.error("Error evaluating rule {} for event: {}", rule.getName(), e.getMessage(), e);
             }
         }
     }

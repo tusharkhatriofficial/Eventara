@@ -99,6 +99,24 @@ public class AlertTriggerHandler {
                 return;
             }
 
+            // Get custom message template from notification config
+            String messageContent = alert.getMessage();
+            if (rule.getNotificationConfig() != null && 
+                rule.getNotificationConfig().containsKey("messageTemplate")) {
+                String customTemplate = (String) rule.getNotificationConfig().get("messageTemplate");
+                if (customTemplate != null && !customTemplate.trim().isEmpty()) {
+                    // Replace placeholders in custom template
+                    messageContent = customTemplate
+                            .replace("{ruleName}", alert.getRuleName())
+                            .replace("{severity}", alert.getSeverity().toString())
+                            .replace("{thresholdValue}", String.valueOf(alert.getThresholdValue()))
+                            .replace("{actualValue}", String.valueOf(alert.getActualValue()))
+                            .replace("{triggeredAt}", alert.getTriggeredAt().toString());
+                    
+                    log.debug("Using custom message template for rule {}: {}", ruleId, customTemplate);
+                }
+            }
+
             // Build notification message
             com.eventara.notification.dto.NotificationMessage notificationMessage = com.eventara.notification.dto.NotificationMessage
                     .builder()
@@ -106,7 +124,7 @@ public class AlertTriggerHandler {
                     .ruleName(alert.getRuleName())
                     .severity(alert.getSeverity())
                     .subject("Alert: " + alert.getRuleName())
-                    .message(alert.getMessage())
+                    .message(messageContent)
                     .thresholdValue(alert.getThresholdValue())
                     .actualValue(alert.getActualValue())
                     .triggeredAt(alert.getTriggeredAt())
