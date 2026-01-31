@@ -39,5 +39,21 @@ public enum MetricType {
     // User Metrics
     ACTIVE_USERS_LAST_1_HOUR,
     ACTIVE_USERS_LAST_24_HOURS,
-    TOTAL_UNIQUE_USERS
+    TOTAL_UNIQUE_USERS,
+
+    // Ratio/Derived Metrics (Phase 2)
+    EVENT_RATIO, // Compare counts of two event types: numerator/denominator
+    SOURCE_ERROR_RATE, // Error rate for a specific source
+    EVENT_TYPE_COUNT, // Count of a specific event type
+
+    // Rate of Change Metrics (Phase 3)
+    ERROR_RATE_CHANGE, // % change in error rate vs previous window
+    LATENCY_CHANGE, // % change in avg latency vs previous window
+    THROUGHPUT_CHANGE, // % change in events/min vs previous window
+    SPIKE_DETECTION, // Sudden increase detection
+
+    // Baseline Comparison Metrics (Phase 5)
+    ERROR_RATE_VS_BASELINE, // Current error rate vs historical baseline
+    LATENCY_VS_BASELINE, // Current latency vs historical baseline
+    THROUGHPUT_VS_BASELINE // Current throughput vs historical baseline
 }

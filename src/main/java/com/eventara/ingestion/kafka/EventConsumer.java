@@ -18,6 +18,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.eventara.rule.evaluation.RealTimeRuleEvaluator;
 
 @Service
 public class EventConsumer {
@@ -38,6 +39,9 @@ public class EventConsumer {
 
     @Autowired
     private MetricsProperties metricsProperties;
+
+    @Autowired
+    private RealTimeRuleEvaluator realTimeRuleEvaluator;
 
     /*
      * Listens to Kafka topic and processes events
@@ -90,6 +94,9 @@ public class EventConsumer {
             }
             // Always record to old service for backward compatibility during migration
             comprehensiveMetricsService.recordEvent(eventDto);
+
+            // Evaluate threshold rules INSTANTLY on every event
+            realTimeRuleEvaluator.evaluateEvent(eventDto);
 
             logger.info("Successfully saved event to database: eventId={}, dbId={}",
                     savedEvent.getEventId(), savedEvent.getId());
