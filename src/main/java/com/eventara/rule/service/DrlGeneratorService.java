@@ -158,6 +158,12 @@ public class DrlGeneratorService {
     private String generateThresholdDrl(CreateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
 
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            log.info("Generating dummy DRL for composite rule: {}", request.getName());
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
+
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
         Object thresholdValueObj = config.get("thresholdValue");
@@ -171,21 +177,7 @@ public class DrlGeneratorService {
         // never fires
         if (isVirtualMetric(metricType)) {
             log.info("Generating dummy DRL for virtual metric: {}", metricType);
-            StringBuilder drl = new StringBuilder();
-            drl.append("package com.eventara.rules\n\n");
-            drl.append("import com.eventara.drools.fact.MetricsFact\n");
-            drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-            drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
-            drl.append("rule \"").append(request.getName()).append("\"\n");
-            drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-            drl.append("    when\n");
-            // Condition that is never true (totalEvents < -1)
-            drl.append("        $metrics: MetricsFact(totalEvents < -1)\n");
-            drl.append("        $handler: AlertTriggerHandler()\n");
-            drl.append("    then\n");
-            drl.append("        // Virtual rule - handled by RealTimeRuleEvaluator\n");
-            drl.append("end\n");
-            return drl.toString();
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
         }
 
         // Build time condition if timeWindowMinutes is present
@@ -256,6 +248,12 @@ public class DrlGeneratorService {
     private String generateThresholdDrl(UpdateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
 
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            log.info("Generating dummy DRL for composite rule (Update): {}", request.getName());
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
+
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
         Object thresholdValueObj = config.get("thresholdValue");
@@ -266,20 +264,7 @@ public class DrlGeneratorService {
 
         if (isVirtualMetric(metricType)) {
             log.info("Generating dummy DRL for virtual metric (Update): {}", metricType);
-            StringBuilder drl = new StringBuilder();
-            drl.append("package com.eventara.rules\n\n");
-            drl.append("import com.eventara.drools.fact.MetricsFact\n");
-            drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-            drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
-            drl.append("rule \"").append(request.getName()).append("\"\n");
-            drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-            drl.append("    when\n");
-            drl.append("        $metrics: MetricsFact(totalEvents < -1)\n");
-            drl.append("        $handler: AlertTriggerHandler()\n");
-            drl.append("    then\n");
-            drl.append("        // Virtual rule\n");
-            drl.append("end\n");
-            return drl.toString();
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
         }
 
         // Build time condition if timeWindowMinutes is present
@@ -351,6 +336,13 @@ public class DrlGeneratorService {
     private String generateThresholdDrl(TestRuleRequest request) {
         Map<String, Object> config = request.getRuleConfig();
 
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            String ruleName = request.getName() != null ? request.getName() : "TestRule";
+            log.info("Generating dummy DRL for composite rule (Test): {}", ruleName);
+            return generateDummyDrlForVirtualRule(ruleName, request.getPriority(), null);
+        }
+
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
         Object thresholdValueObj = config.get("thresholdValue");
@@ -361,19 +353,8 @@ public class DrlGeneratorService {
 
         if (isVirtualMetric(metricType)) {
             String ruleName = request.getName() != null ? request.getName() : "TestRule";
-            StringBuilder drl = new StringBuilder();
-            drl.append("package com.eventara.rules\n\n");
-            drl.append("import com.eventara.drools.fact.MetricsFact\n");
-            drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
-            drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
-            drl.append("rule \"").append(ruleName).append("\"\n");
-            drl.append("    salience ").append(request.getPriority() != null ? request.getPriority() : 0).append("\n");
-            drl.append("    when\n");
-            drl.append("        $metrics: MetricsFact(totalEvents < -1)\n");
-            drl.append("        $handler: AlertTriggerHandler()\n");
-            drl.append("    then\n");
-            drl.append("end\n");
-            return drl.toString();
+            log.info("Generating dummy DRL for virtual metric (Test): {}", metricType);
+            return generateDummyDrlForVirtualRule(ruleName, request.getPriority(), null);
         }
 
         // Build time condition if timeWindowMinutes is present
@@ -558,5 +539,28 @@ public class DrlGeneratorService {
 
     private String getGetterMethod(String fieldName) {
         return "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    }
+
+    /**
+     * Generate a dummy DRL for rules handled by RealTimeRuleEvaluator (virtual
+     * metrics, composite rules, etc.)
+     * The condition totalEvents < -1 ensures this rule never fires in Drools.
+     */
+    private String generateDummyDrlForVirtualRule(String ruleName, Integer priority, Long ruleId) {
+        StringBuilder drl = new StringBuilder();
+        drl.append("package com.eventara.rules\n\n");
+        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+        drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
+        drl.append("rule \"").append(ruleName).append("\"\n");
+        drl.append("    salience ").append(priority != null ? priority : 0).append("\n");
+        drl.append("    when\n");
+        // Condition that is never true (totalEvents < -1)
+        drl.append("        $metrics: MetricsFact(totalEvents < -1)\n");
+        drl.append("        $handler: AlertTriggerHandler()\n");
+        drl.append("    then\n");
+        drl.append("        // Virtual rule - handled by RealTimeRuleEvaluator\n");
+        drl.append("end\n");
+        return drl.toString();
     }
 }

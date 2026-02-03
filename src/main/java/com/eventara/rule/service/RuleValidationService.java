@@ -9,6 +9,7 @@ import com.eventara.rule.exception.InvalidRuleException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -58,6 +59,141 @@ public class RuleValidationService {
     }
 
     private void validateRuleConfigMap(Map<String, Object> config) {
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            validateCompositeRule(config);
+            return;
+        }
+
+        // Check if this is an event ratio rule (Phase 2)
+        if (config.containsKey("metricType") && "EVENT_RATIO".equals(config.get("metricType").toString())) {
+            validateEventRatioRule(config);
+            return;
+        }
+
+        // Otherwise, validate as a simple threshold rule
+        validateSimpleThresholdRule(config);
+    }
+
+    /**
+     * Validate composite rule configuration (AND/OR with multiple conditions).
+     */
+    @SuppressWarnings("unchecked")
+    private void validateCompositeRule(Map<String, Object> config) {
+        // Validate operator
+        if (!config.containsKey("operator")) {
+            throw new InvalidRuleException("operator is required for composite rules");
+        }
+
+        String operator = config.get("operator").toString();
+        if (!"AND".equalsIgnoreCase(operator) && !"OR".equalsIgnoreCase(operator)) {
+            throw new InvalidRuleException("operator must be either 'AND' or 'OR'");
+        }
+
+        // Validate conditions array
+        Object conditionsObj = config.get("conditions");
+        if (!(conditionsObj instanceof List)) {
+            throw new InvalidRuleException("conditions must be an array for composite rules");
+        }
+
+        List<?> conditionsList = (List<?>) conditionsObj;
+        if (conditionsList.isEmpty()) {
+            throw new InvalidRuleException("conditions array cannot be empty for composite rules");
+        }
+
+        // Validate each condition
+        for (int i = 0; i < conditionsList.size(); i++) {
+            Object condObj = conditionsList.get(i);
+            if (!(condObj instanceof Map)) {
+                throw new InvalidRuleException("Each condition must be an object at index " + i);
+            }
+
+            Map<String, Object> condition = (Map<String, Object>) condObj;
+
+            // Validate metricType in condition
+            if (!condition.containsKey("metricType")) {
+                throw new InvalidRuleException("metricType is required in condition at index " + i);
+            }
+
+            String metricTypeStr = condition.get("metricType").toString();
+            try {
+                MetricType.valueOf(metricTypeStr);
+            } catch (IllegalArgumentException e) {
+                throw new InvalidRuleException(
+                        "Invalid metric type '" + metricTypeStr + "' in condition at index " + i);
+            }
+
+            // Validate condition operator
+            if (!condition.containsKey("condition")) {
+                throw new InvalidRuleException("condition is required in condition at index " + i);
+            }
+
+            String conditionStr = condition.get("condition").toString();
+            try {
+                Condition.valueOf(conditionStr);
+            } catch (IllegalArgumentException e) {
+                throw new InvalidRuleException("Invalid condition '" + conditionStr + "' in condition at index " + i);
+            }
+
+            // Validate value (threshold)
+            if (!condition.containsKey("value")) {
+                throw new InvalidRuleException("value is required in condition at index " + i);
+            }
+
+            try {
+                Double.parseDouble(condition.get("value").toString());
+            } catch (NumberFormatException e) {
+                throw new InvalidRuleException("value must be a valid number in condition at index " + i);
+            }
+        }
+
+        log.debug("Composite rule configuration validated successfully with {} conditions", conditionsList.size());
+    }
+
+    /**
+     * Validate event ratio rule configuration.
+     */
+    private void validateEventRatioRule(Map<String, Object> config) {
+        // Validate numeratorEventType
+        if (!config.containsKey("numeratorEventType")) {
+            throw new InvalidRuleException("numeratorEventType is required for EVENT_RATIO rules");
+        }
+
+        // Validate denominatorEventType
+        if (!config.containsKey("denominatorEventType")) {
+            throw new InvalidRuleException("denominatorEventType is required for EVENT_RATIO rules");
+        }
+
+        // Validate condition
+        if (!config.containsKey("condition")) {
+            throw new InvalidRuleException("condition is required for EVENT_RATIO rules");
+        }
+
+        String conditionStr = config.get("condition").toString();
+        try {
+            Condition.valueOf(conditionStr);
+        } catch (IllegalArgumentException e) {
+            throw new InvalidRuleException("Invalid condition: " + conditionStr);
+        }
+
+        // Validate thresholdValue
+        if (!config.containsKey("thresholdValue")) {
+            throw new InvalidRuleException("thresholdValue is required for EVENT_RATIO rules");
+        }
+
+        try {
+            Double.parseDouble(config.get("thresholdValue").toString());
+        } catch (NumberFormatException e) {
+            throw new InvalidRuleException("thresholdValue must be a valid number for EVENT_RATIO rules");
+        }
+
+        log.debug("EVENT_RATIO rule configuration validated successfully");
+    }
+
+    /**
+     * Validate simple threshold rule configuration.
+     */
+    private void validateSimpleThresholdRule(Map<String, Object> config) {
         // Validate metric type
         if (!config.containsKey("metricType")) {
             throw new InvalidRuleException("metricType is required in rule configuration");

@@ -99,9 +99,34 @@ export const RuleEditor: React.FC = () => {
 
       const cfg = jsonMode ? JSON.parse(jsonText) : (form as any).ruleConfig;
       // Client-side validation that mirrors backend requirements
-      if (!cfg || !cfg.metricType) throw new Error('metricType is required');
-      if (!cfg.condition) throw new Error('condition is required');
-      if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+
+      // Check if this is a composite rule
+      if (cfg && cfg.conditions) {
+        // Validate composite rule
+        if (!cfg.operator) throw new Error('operator is required for composite rules');
+        if (!Array.isArray(cfg.conditions)) throw new Error('conditions must be an array');
+        if (cfg.conditions.length === 0) throw new Error('conditions array cannot be empty');
+
+        // Validate each condition
+        cfg.conditions.forEach((cond: any, idx: number) => {
+          if (!cond.metricType) throw new Error(`metricType is required in condition ${idx + 1}`);
+          if (!cond.condition) throw new Error(`condition is required in condition ${idx + 1}`);
+          if (cond.value === undefined || cond.value === '') throw new Error(`value is required in condition ${idx + 1}`);
+        });
+      }
+      // Check if this is an event ratio rule
+      else if (cfg && cfg.metricType === 'EVENT_RATIO') {
+        if (!cfg.numeratorEventType) throw new Error('numeratorEventType is required for EVENT_RATIO');
+        if (!cfg.denominatorEventType) throw new Error('denominatorEventType is required for EVENT_RATIO');
+        if (!cfg.condition) throw new Error('condition is required');
+        if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+      }
+      // Simple threshold rule
+      else {
+        if (!cfg || !cfg.metricType) throw new Error('metricType is required');
+        if (!cfg.condition) throw new Error('condition is required');
+        if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+      }
 
       const payload: TestRuleRequest = {
         ruleType: (form as any).ruleType,
@@ -124,9 +149,34 @@ export const RuleEditor: React.FC = () => {
 
       const cfg = jsonMode ? JSON.parse(jsonText) : (form as any).ruleConfig;
       // Basic validation before save
-      if (!cfg || !cfg.metricType) throw new Error('metricType is required');
-      if (!cfg.condition) throw new Error('condition is required');
-      if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+
+      // Check if this is a composite rule
+      if (cfg && cfg.conditions) {
+        // Validate composite rule
+        if (!cfg.operator) throw new Error('operator is required for composite rules');
+        if (!Array.isArray(cfg.conditions)) throw new Error('conditions must be an array');
+        if (cfg.conditions.length === 0) throw new Error('conditions array cannot be empty');
+
+        // Validate each condition
+        cfg.conditions.forEach((cond: any, idx: number) => {
+          if (!cond.metricType) throw new Error(`metricType is required in condition ${idx + 1}`);
+          if (!cond.condition) throw new Error(`condition is required in condition ${idx + 1}`);
+          if (cond.value === undefined || cond.value === '') throw new Error(`value is required in condition ${idx + 1}`);
+        });
+      }
+      // Check if this is an event ratio rule
+      else if (cfg && cfg.metricType === 'EVENT_RATIO') {
+        if (!cfg.numeratorEventType) throw new Error('numeratorEventType is required for EVENT_RATIO');
+        if (!cfg.denominatorEventType) throw new Error('denominatorEventType is required for EVENT_RATIO');
+        if (!cfg.condition) throw new Error('condition is required');
+        if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+      }
+      // Simple threshold rule
+      else {
+        if (!cfg || !cfg.metricType) throw new Error('metricType is required');
+        if (!cfg.condition) throw new Error('condition is required');
+        if (cfg.thresholdValue === undefined || cfg.thresholdValue === '') throw new Error('thresholdValue is required');
+      }
 
       const payload: CreateRuleRequest | UpdateRuleRequest = {
         ...(form as any),
@@ -590,8 +640,13 @@ export const RuleEditor: React.FC = () => {
                   value={advancedMode}
                   onChange={(e) => {
                     setAdvancedMode(e.target.value as any);
-                    // Reset config when changing modes
-                    onField('ruleConfig', {});
+                    // Reset config when changing modes with appropriate defaults
+                    if (e.target.value === 'composite') {
+                      // Initialize composite mode with operator and empty conditions
+                      onField('ruleConfig', { operator: 'AND', conditions: [] });
+                    } else {
+                      onField('ruleConfig', {});
+                    }
                   }}
                 >
                   <option value="simple">Simple Threshold</option>
