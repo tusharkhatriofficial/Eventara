@@ -15,7 +15,7 @@ import java.util.Map;
 public class DrlGeneratorService {
 
     public String generateDrl(CreateRuleRequest request) {
-        return generateDrl(request, null);  // Default without ruleId for initial validation
+        return generateDrl(request, null); // Default without ruleId for initial validation
     }
 
     public String generateDrl(CreateRuleRequest request, Long ruleId) {
@@ -36,7 +36,7 @@ public class DrlGeneratorService {
     }
 
     public String generateDrl(UpdateRuleRequest request) {
-        return generateDrl(request, null);  // Default without ruleId
+        return generateDrl(request, null); // Default without ruleId
     }
 
     public String generateDrl(UpdateRuleRequest request, Long ruleId) {
@@ -110,6 +110,32 @@ public class DrlGeneratorService {
     }
 
     /**
+     * Check if metric is virtual (handled by RealTimeRuleEvaluator, not Drools)
+     */
+    private boolean isVirtualMetric(String metricTypeStr) {
+        try {
+            MetricType type = MetricType.valueOf(metricTypeStr);
+            switch (type) {
+                case EVENT_RATIO:
+                case SOURCE_ERROR_RATE:
+                case EVENT_TYPE_COUNT:
+                case ERROR_RATE_CHANGE:
+                case LATENCY_CHANGE:
+                case THROUGHPUT_CHANGE:
+                case SPIKE_DETECTION:
+                case ERROR_RATE_VS_BASELINE:
+                case LATENCY_VS_BASELINE:
+                case THROUGHPUT_VS_BASELINE:
+                    return true;
+                default:
+                    return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Generate cast expression to convert to Double
      */
     private String getCastExpression(String metricPath, String javaType) {
@@ -129,9 +155,14 @@ public class DrlGeneratorService {
         }
     }
 
-
     private String generateThresholdDrl(CreateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
+
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            log.info("Generating dummy DRL for composite rule: {}", request.getName());
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
 
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
@@ -140,6 +171,14 @@ public class DrlGeneratorService {
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
+
+        // Check for virtual/complex metrics that Drools doesn't handle directly
+        // These are handled by RealTimeRuleEvaluator, so we generate a dummy DRL that
+        // never fires
+        if (isVirtualMetric(metricType)) {
+            log.info("Generating dummy DRL for virtual metric: {}", metricType);
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
 
         // Build time condition if timeWindowMinutes is present
         String timeCondition = "";
@@ -206,9 +245,14 @@ public class DrlGeneratorService {
         return drl.toString();
     }
 
-
     private String generateThresholdDrl(UpdateRuleRequest request, Long ruleId) {
         Map<String, Object> config = request.getRuleConfig();
+
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            log.info("Generating dummy DRL for composite rule (Update): {}", request.getName());
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
 
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
@@ -217,6 +261,11 @@ public class DrlGeneratorService {
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
+
+        if (isVirtualMetric(metricType)) {
+            log.info("Generating dummy DRL for virtual metric (Update): {}", metricType);
+            return generateDummyDrlForVirtualRule(request.getName(), request.getPriority(), ruleId);
+        }
 
         // Build time condition if timeWindowMinutes is present
         String timeCondition = "";
@@ -287,6 +336,13 @@ public class DrlGeneratorService {
     private String generateThresholdDrl(TestRuleRequest request) {
         Map<String, Object> config = request.getRuleConfig();
 
+        // Check if this is a composite rule (has conditions array)
+        if (config.containsKey("conditions")) {
+            String ruleName = request.getName() != null ? request.getName() : "TestRule";
+            log.info("Generating dummy DRL for composite rule (Test): {}", ruleName);
+            return generateDummyDrlForVirtualRule(ruleName, request.getPriority(), null);
+        }
+
         String metricType = config.get("metricType").toString();
         String condition = config.get("condition").toString();
         Object thresholdValueObj = config.get("thresholdValue");
@@ -294,6 +350,12 @@ public class DrlGeneratorService {
         String metricPath = getMetricPath(metricType);
         String operator = Condition.valueOf(condition).getOperator();
         String javaType = getMetricJavaType(metricType);
+
+        if (isVirtualMetric(metricType)) {
+            String ruleName = request.getName() != null ? request.getName() : "TestRule";
+            log.info("Generating dummy DRL for virtual metric (Test): {}", metricType);
+            return generateDummyDrlForVirtualRule(ruleName, request.getPriority(), null);
+        }
 
         // Build time condition if timeWindowMinutes is present
         String timeCondition = "";
@@ -361,7 +423,6 @@ public class DrlGeneratorService {
 
         return drl.toString();
     }
-
 
     private String generatePatternDrl(CreateRuleRequest request) {
         return "// Pattern rule DRL generation not yet implemented";
@@ -476,8 +537,30 @@ public class DrlGeneratorService {
         }
     }
 
-
     private String getGetterMethod(String fieldName) {
         return "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+    }
+
+    /**
+     * Generate a dummy DRL for rules handled by RealTimeRuleEvaluator (virtual
+     * metrics, composite rules, etc.)
+     * The condition totalEvents < -1 ensures this rule never fires in Drools.
+     */
+    private String generateDummyDrlForVirtualRule(String ruleName, Integer priority, Long ruleId) {
+        StringBuilder drl = new StringBuilder();
+        drl.append("package com.eventara.rules\n\n");
+        drl.append("import com.eventara.drools.fact.MetricsFact\n");
+        drl.append("import com.eventara.alert.service.AlertTriggerHandler\n\n");
+        drl.append("global com.eventara.alert.service.AlertTriggerHandler alertHandler;\n\n");
+        drl.append("rule \"").append(ruleName).append("\"\n");
+        drl.append("    salience ").append(priority != null ? priority : 0).append("\n");
+        drl.append("    when\n");
+        // Condition that is never true (totalEvents < -1)
+        drl.append("        $metrics: MetricsFact(totalEvents < -1)\n");
+        drl.append("        $handler: AlertTriggerHandler()\n");
+        drl.append("    then\n");
+        drl.append("        // Virtual rule - handled by RealTimeRuleEvaluator\n");
+        drl.append("end\n");
+        return drl.toString();
     }
 }

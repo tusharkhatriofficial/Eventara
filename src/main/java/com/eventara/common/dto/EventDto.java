@@ -25,7 +25,8 @@ public class EventDto {
     private Map<String, String> tags = new HashMap<>();
     private Map<String, Object> metadata = new HashMap<>();
 
-    public  EventDto(){}
+    public EventDto() {
+    }
 
     public String getEventId() {
         return eventId;
@@ -99,10 +100,23 @@ public class EventDto {
         this.metadata = metadata;
     }
 
-    //Calculate processing latency in milliseconds
+    // Calculate processing latency in milliseconds
     @JsonIgnore
-    public long getProcessingLatencyMs(){
-        if(timestamp!=null && receivedAt != null){
+    public long getProcessingLatencyMs() {
+        // Check metadata first for explicit application latency
+        if (metadata != null && metadata.containsKey("latency")) {
+            try {
+                Object val = metadata.get("latency");
+                if (val instanceof Number)
+                    return ((Number) val).longValue();
+                if (val instanceof String)
+                    return Long.parseLong((String) val);
+            } catch (Exception ignored) {
+                // Ignore parse errors
+            }
+        }
+
+        if (timestamp != null && receivedAt != null) {
             return Duration.between(timestamp, receivedAt).toMillis();
         }
         return 0;
@@ -117,7 +131,5 @@ public class EventDto {
     public String getTag(String key) {
         return tags != null ? tags.get(key) : null;
     }
-
-
 
 }

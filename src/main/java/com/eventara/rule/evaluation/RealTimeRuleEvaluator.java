@@ -64,8 +64,8 @@ public class RealTimeRuleEvaluator {
     public void evaluateEvent(EventDto event) {
         // Get active threshold rules (cached)
         List<AlertRule> rules = getActiveThresholdRules();
-        
-        log.info("🔍 Evaluating event: source={}, type={}, severity={} | {} active threshold rules found", 
+
+        log.info("🔍 Evaluating event: source={}, type={}, severity={} | {} active threshold rules found",
                 event.getSource(), event.getEventType(), event.getSeverity(), rules.size());
 
         for (AlertRule rule : rules) {
@@ -389,6 +389,7 @@ public class RealTimeRuleEvaluator {
 
     /**
      * Get metric value directly from bucket (simple version without config).
+     * Used for rate of change calculations.
      */
     private double getMetricValueFromBucket(String metricType, MetricsBucket bucket) {
         switch (metricType) {
@@ -399,9 +400,24 @@ public class RealTimeRuleEvaluator {
             case "TOTAL_EVENTS":
                 return bucket.getTotalEvents();
             case "EVENTS_PER_MINUTE":
-                return bucket.getTotalEvents(); // Will be divided by window later
+                return bucket.getTotalEvents();
             case "TOTAL_ERRORS":
                 return bucket.getTotalErrors();
+            case "P50_LATENCY":
+                Double p50 = bucket.getLatencyP50();
+                return p50 != null ? p50 : 0;
+            case "P95_LATENCY":
+                Double p95 = bucket.getLatencyP95();
+                return p95 != null ? p95 : 0;
+            case "P99_LATENCY":
+                Double p99 = bucket.getLatencyP99();
+                return p99 != null ? p99 : 0;
+            case "MAX_LATENCY":
+                Long max = bucket.getLatencyMax();
+                return max != null ? max : 0;
+            case "MIN_LATENCY":
+                Long min = bucket.getLatencyMin();
+                return min != null ? min : 0;
             default:
                 return 0;
         }
@@ -451,6 +467,9 @@ public class RealTimeRuleEvaluator {
             double currentValue = getMetricValue(metricType, bucket, null, condConfig, windowMinutes);
             boolean conditionMet = isThresholdCrossed(condOp, currentValue, threshold);
 
+            log.info("  Condition: {}({}) {} {} -> {}",
+                    metricType, currentValue, condOp, threshold, conditionMet ? "✓ MET" : "✗ NOT MET");
+
             // Track first condition's values for alert message
             if (first) {
                 result.primaryValue = currentValue;
@@ -475,7 +494,8 @@ public class RealTimeRuleEvaluator {
 
         result.details = details.toString();
 
-        log.debug("Composite [{}]: {} -> {}", operator, result.details, result.crossed);
+        log.info("✅ Composite [{}] evaluation: {} -> Result: {}",
+                operator, result.details, result.crossed ? "FIRE ALERT" : "do not fire");
 
         return result;
     }
@@ -502,12 +522,18 @@ public class RealTimeRuleEvaluator {
             Map<String, Object> config, int windowMinutes) {
 
         switch (metricType) {
+            // Error Metrics
             case "ERROR_RATE":
                 return bucket.getErrorRate();
             case "TOTAL_ERRORS":
                 return bucket.getTotalErrors();
+
+            // Latency Metrics
             case "AVG_LATENCY":
                 return bucket.getAvgLatency();
+            case "P50_LATENCY":
+                Double p50 = bucket.getLatencyP50();
+                return p50 != null ? p50 : 0;
             case "P95_LATENCY":
                 Double p95 = bucket.getLatencyP95();
                 return p95 != null ? p95 : 0;
@@ -517,12 +543,64 @@ public class RealTimeRuleEvaluator {
             case "MAX_LATENCY":
                 Long max = bucket.getLatencyMax();
                 return max != null ? max : 0;
+            case "MIN_LATENCY":
+                Long min = bucket.getLatencyMin();
+                return min != null ? min : 0;
+
+            // Throughput Metrics
+            case "EVENTS_PER_SECOND":
+                return bucket.getTotalEvents() / (double) Math.max(1, windowMinutes * 60);
             case "EVENTS_PER_MINUTE":
                 return bucket.getTotalEvents() / (double) Math.max(1, windowMinutes);
+            case "EVENTS_PER_HOUR":
+                return bucket.getTotalEvents() * 60.0 / Math.max(1, windowMinutes);
+            case "EVENTS_PER_DAY":
+                return bucket.getTotalEvents() * 1440.0 / Math.max(1, windowMinutes);
+            case "PEAK_THROUGHPUT":
+            case "AVG_THROUGHPUT_1H":
+            case "AVG_THROUGHPUT_24H":
+                return bucket.getTotalEvents() / (double) Math.max(1, windowMinutes);
+
+            // Time Window Metrics - map to TOTAL_EVENTS for the specified window
+            case "EVENTS_LAST_1_MINUTE":
+                MetricsBucket last1 = redisMetrics.getMetricsLastMinutes(1);
+                return last1.getTotalEvents();
+            case "EVENTS_LAST_5_MINUTES":
+                MetricsBucket last5 = redisMetrics.getMetricsLastMinutes(5);
+                return last5.getTotalEvents();
+            case "EVENTS_LAST_15_MINUTES":
+                MetricsBucket last15 = redisMetrics.getMetricsLastMinutes(15);
+                return last15.getTotalEvents();
+            case "EVENTS_LAST_1_HOUR":
+                MetricsBucket last60 = redisMetrics.getMetricsLastMinutes(60);
+                return last60.getTotalEvents();
+            case "EVENTS_LAST_24_HOURS":
+                MetricsBucket last1440 = redisMetrics.getMetricsLastMinutes(1440);
+                return last1440.getTotalEvents();
+
+            // Summary Metrics
             case "TOTAL_EVENTS":
                 return bucket.getTotalEvents();
+            case "UNIQUE_SOURCES":
+                return bucket.getUniqueSourcesEstimate() > 0 ? bucket.getUniqueSourcesEstimate()
+                        : bucket.getBySource().size();
+            case "UNIQUE_EVENT_TYPES":
+                return bucket.getUniqueEventTypesEstimate() > 0 ? bucket.getUniqueEventTypesEstimate()
+                        : bucket.getByEventType().size();
+            case "UNIQUE_USERS":
+                return bucket.getUniqueUsersEstimate();
+            case "SYSTEM_HEALTH":
+                // Simple health score: 100 - error_rate
+                return Math.max(0, 100 - bucket.getErrorRate());
+
+            // User Metrics
+            case "ACTIVE_USERS_LAST_1_HOUR":
+            case "ACTIVE_USERS_LAST_24_HOURS":
+            case "TOTAL_UNIQUE_USERS":
+                return bucket.getUniqueUsersEstimate();
+
+            // Derived Metrics
             case "SOURCE_ERROR_RATE":
-                // Get error rate for specific source from config
                 if (config != null && config.containsKey("targetSource")) {
                     String source = (String) config.get("targetSource");
                     MetricsBucket sourceBucket = redisMetrics.getMetricsForSource(source, windowMinutes);
@@ -530,13 +608,13 @@ public class RealTimeRuleEvaluator {
                 }
                 return bucket.getErrorRate();
             case "EVENT_TYPE_COUNT":
-                // Get count for specific event type
                 if (config != null && config.containsKey("targetEventType")) {
                     String eventType = (String) config.get("targetEventType");
                     MetricsBucket typeBucket = redisMetrics.getMetricsForEventType(eventType, windowMinutes);
                     return typeBucket.getTotalEvents();
                 }
                 return bucket.getTotalEvents();
+
             default:
                 log.warn("Unknown metric type: {}", metricType);
                 return 0;
