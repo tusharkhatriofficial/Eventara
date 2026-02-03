@@ -15,7 +15,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        # Required for the `timescaledb` extension used by Flyway migrations.
+        image: timescale/timescaledb:2.25.0-pg15
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: mysecretpassword
