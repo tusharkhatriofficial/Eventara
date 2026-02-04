@@ -288,6 +288,7 @@ Add the following lines at the end of the file:
 # =========================
 # Master switch - set to true to enable adaptive evaluation
 eventara.evaluation.adaptive.enabled=${EVENTARA_ADAPTIVE_ENABLED:true}
+# Defaults to true when EVENTARA_ADAPTIVE_ENABLED is unset; set EVENTARA_ADAPTIVE_ENABLED=false to disable.
 
 # Event rate thresholds (events per second)
 # Determines which evaluation interval tier is used
@@ -380,6 +381,8 @@ src/main/resources/
 | `eventara.evaluation.adaptive.intervals.burst-ms` | `100` | Interval for burst mode (100ms) |
 
 ---
+
+Note: If `EVENTARA_ADAPTIVE_ENABLED` is unset in an environment, adaptive evaluation defaults to enabled. Set `EVENTARA_ADAPTIVE_ENABLED=false` to disable without changing the file.
 
 ## Interval Behavior Chart
 
