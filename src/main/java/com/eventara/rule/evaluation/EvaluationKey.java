@@ -74,6 +74,18 @@ public class EvaluationKey {
             }
         }
 
+        if (sources != null) {
+            sources = sources.stream()
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .sorted()
+                    .toList();
+
+            if (sources.isEmpty()) {
+                sources = null;
+            }
+        }
+
         // Extract event type filter
         List<String> types = null;
         if (config.containsKey("eventTypeFilter")) {
@@ -83,6 +95,18 @@ public class EvaluationKey {
                 if (types.isEmpty()) {
                     types = null; // Empty list = no filter = all types
                 }
+            }
+        }
+
+        if (types != null) {
+            types = types.stream()
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .sorted()
+                    .toList();
+
+            if (types.isEmpty()) {
+                types = null;
             }
         }
 
