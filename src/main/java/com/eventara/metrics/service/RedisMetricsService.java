@@ -33,6 +33,7 @@ public class RedisMetricsService {
 
     private static final String BUCKET_PREFIX = "metrics:bucket:";
     private static final String LATENCIES_PREFIX = "metrics:latencies:";
+    private static final String TYPE_PREFIX = ":type:";
     private static final String FIELD_EVENTS = "events";
     private static final String FIELD_ERRORS = "errors";
     private static final String FIELD_LATENCY_SUM = "latency_sum";
@@ -97,11 +98,20 @@ public class RedisMetricsService {
 
             // Track by event type
             if (event.getEventType() != null) {
-                String typeKey = bucketKey + ":type:" + event.getEventType();
+                String typeKey = bucketKey + TYPE_PREFIX + event.getEventType();
                 stringRedisTemplate.opsForHash().increment(typeKey, FIELD_EVENTS, 1);
+                if (event.isError()) {
+                    stringRedisTemplate.opsForHash().increment(typeKey, FIELD_ERRORS, 1);
+                }
                 if (latency > 0) {
                     stringRedisTemplate.opsForHash().increment(typeKey, FIELD_LATENCY_SUM, latency);
                     stringRedisTemplate.opsForHash().increment(typeKey, FIELD_LATENCY_COUNT, 1);
+
+                    updateMinMax(typeKey, latency);
+
+                    String typeLatencyKey = LATENCIES_PREFIX + bucketStart + TYPE_PREFIX + event.getEventType();
+                    stringRedisTemplate.opsForZSet().add(typeLatencyKey, String.valueOf(latency), latency);
+                    stringRedisTemplate.expire(typeLatencyKey, ttlSeconds, TimeUnit.SECONDS);
                 }
                 stringRedisTemplate.expire(typeKey, ttlSeconds, TimeUnit.SECONDS);
             }
@@ -248,6 +258,11 @@ public class RedisMetricsService {
                 Instant.ofEpochMilli(windowStart),
                 Instant.ofEpochMilli(now));
 
+        double p50WeightedSum = 0;
+        double p95WeightedSum = 0;
+        double p99WeightedSum = 0;
+        long percentileWeight = 0;
+
         for (String eventType : filteredTypes) {
             MetricsBucket typeBucket = aggregateBucketsForEventType(windowStart, now, eventType);
             combined.setTotalEvents(combined.getTotalEvents() + typeBucket.getTotalEvents());
@@ -265,6 +280,23 @@ public class RedisMetricsService {
                     combined.setLatencyMax(typeBucket.getLatencyMax());
                 }
             }
+
+            if (typeBucket.getLatencyCount() > 0
+                    && typeBucket.getLatencyP50() != null
+                    && typeBucket.getLatencyP95() != null
+                    && typeBucket.getLatencyP99() != null) {
+                long weight = typeBucket.getLatencyCount();
+                percentileWeight += weight;
+                p50WeightedSum += typeBucket.getLatencyP50() * weight;
+                p95WeightedSum += typeBucket.getLatencyP95() * weight;
+                p99WeightedSum += typeBucket.getLatencyP99() * weight;
+            }
+        }
+
+        if (percentileWeight > 0) {
+            combined.setLatencyP50(p50WeightedSum / percentileWeight);
+            combined.setLatencyP95(p95WeightedSum / percentileWeight);
+            combined.setLatencyP99(p99WeightedSum / percentileWeight);
         }
 
         return combined;
@@ -509,18 +541,55 @@ public class RedisMetricsService {
         long bucketSizeMs = metricsProperties.getBucketSizeMs();
         long bucketStart = getBucketStart(startMs);
 
+        List<Long> allLatencies = new ArrayList<>();
+
         for (long t = bucketStart; t <= endMs; t += bucketSizeMs) {
             String bucketKey = BUCKET_PREFIX + t;
-            String typeKey = bucketKey + ":type:" + eventType;
+            String typeKey = bucketKey + TYPE_PREFIX + eventType;
 
             // Get type-specific metrics
             long count = getLongFromHash(typeKey, FIELD_EVENTS);
+            long errors = getLongFromHash(typeKey, FIELD_ERRORS);
             long latencySum = getLongFromHash(typeKey, FIELD_LATENCY_SUM);
             long latencyCount = getLongFromHash(typeKey, FIELD_LATENCY_COUNT);
+            Long latencyMin = getLongFromHashOrNull(typeKey, FIELD_LATENCY_MIN);
+            Long latencyMax = getLongFromHashOrNull(typeKey, FIELD_LATENCY_MAX);
 
             result.setTotalEvents(result.getTotalEvents() + count);
+            result.setTotalErrors(result.getTotalErrors() + errors);
             result.setLatencySum(result.getLatencySum() + latencySum);
             result.setLatencyCount(result.getLatencyCount() + latencyCount);
+
+            if (latencyMin != null) {
+                if (result.getLatencyMin() == null || latencyMin < result.getLatencyMin()) {
+                    result.setLatencyMin(latencyMin);
+                }
+            }
+
+            if (latencyMax != null) {
+                if (result.getLatencyMax() == null || latencyMax > result.getLatencyMax()) {
+                    result.setLatencyMax(latencyMax);
+                }
+            }
+
+            String typeLatencyKey = LATENCIES_PREFIX + t + TYPE_PREFIX + eventType;
+            Set<String> latencies = stringRedisTemplate.opsForZSet().range(typeLatencyKey, 0, -1);
+            if (latencies != null) {
+                for (String l : latencies) {
+                    try {
+                        allLatencies.add(Long.parseLong(l));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+            }
+        }
+
+        if (!allLatencies.isEmpty()) {
+            Collections.sort(allLatencies);
+            int size = allLatencies.size();
+            result.setLatencyP50((double) allLatencies.get((int) (size * 0.50)));
+            result.setLatencyP95((double) allLatencies.get((int) (size * 0.95)));
+            result.setLatencyP99((double) allLatencies.get(Math.min((int) (size * 0.99), size - 1)));
         }
 
         return result;
