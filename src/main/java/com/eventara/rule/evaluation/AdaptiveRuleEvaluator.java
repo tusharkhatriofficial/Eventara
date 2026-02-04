@@ -71,7 +71,7 @@ public class AdaptiveRuleEvaluator {
 
     // --- Rule Cache ---
 
-    private volatile List<AlertRule> cachedRules;
+    private volatile List<AlertRule> cachedRules = List.of();
     private volatile long lastRuleRefresh = 0;
     private static final long RULE_CACHE_TTL_MS = 60_000;
 
@@ -359,7 +359,7 @@ public class AdaptiveRuleEvaluator {
 
     private List<AlertRule> getActiveThresholdRules() {
         long now = System.currentTimeMillis();
-        if (cachedRules == null || (now - lastRuleRefresh) > RULE_CACHE_TTL_MS) {
+        if ((now - lastRuleRefresh) > RULE_CACHE_TTL_MS) {
             refreshRuleCache();
         }
         return cachedRules;
@@ -367,13 +367,12 @@ public class AdaptiveRuleEvaluator {
 
     public synchronized void refreshRuleCache() {
         try {
-            cachedRules = ruleRepository.findByRuleTypeAndStatus(RuleType.THRESHOLD, RuleStatus.ACTIVE);
+            List<AlertRule> freshRules = ruleRepository.findByRuleTypeAndStatus(RuleType.THRESHOLD, RuleStatus.ACTIVE);
+            cachedRules = freshRules != null ? freshRules : List.of();
             lastRuleRefresh = System.currentTimeMillis();
         } catch (Exception e) {
             log.error("Failed to refresh rule cache", e);
             // Don't clear cache on error, keep using stale rules if possible
-            if (cachedRules == null)
-                cachedRules = List.of();
         }
     }
 
