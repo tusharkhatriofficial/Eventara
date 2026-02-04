@@ -203,16 +203,18 @@ public class AdaptiveRuleEvaluator {
         double eps = rateMonitor.sampleAndGetEps();
         long oldInterval = currentIntervalMs;
 
-        currentIntervalMs = config.getIntervalForRate(eps);
+        long newInterval = config.getIntervalForRate(eps);
+        currentIntervalMs = newInterval;
 
         // Log meaningful changes (e.g., jumping from IDLE to BURST)
-        if (log.isInfoEnabled() && Math.abs(currentIntervalMs - oldInterval) > 1000) {
+        if (log.isInfoEnabled() && Math.abs(newInterval - oldInterval) > 1000) {
             String epsFormatted = String.format(java.util.Locale.US, "%.1f", eps);
+            String tier = config.getTierForRate(eps);
             log.info("Traffic changed (eps={}). Adjusted interval: {}ms -> {}ms ({})",
                     epsFormatted,
                     oldInterval,
-                    currentIntervalMs,
-                    config.getTierForRate(eps));
+                    newInterval,
+                    tier);
         }
     }
 
