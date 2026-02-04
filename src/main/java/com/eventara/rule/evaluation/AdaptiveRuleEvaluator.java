@@ -207,8 +207,11 @@ public class AdaptiveRuleEvaluator {
 
         // Log meaningful changes (e.g., jumping from IDLE to BURST)
         if (Math.abs(currentIntervalMs - oldInterval) > 1000) {
-            log.info("Traffic changed (eps={:.1f}). Adjusted interval: {}ms -> {}ms ({})",
-                    eps, oldInterval, currentIntervalMs, config.getTierForRate(eps));
+            log.info("Traffic changed (eps={}). Adjusted interval: {}ms -> {}ms ({})",
+                    String.format(java.util.Locale.US, "%.1f", eps),
+                    oldInterval,
+                    currentIntervalMs,
+                    config.getTierForRate(eps));
         }
     }
 

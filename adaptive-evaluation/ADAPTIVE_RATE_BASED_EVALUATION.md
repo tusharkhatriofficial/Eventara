@@ -301,7 +301,7 @@ Map<EvaluationKey, List<AlertRule>> groups = rules.stream()
 ### Phase 1: Add Alongside Existing (1-2 days)
 
 1. Create `AdaptiveRuleEvaluator` as new component
-2. Add feature flag `eventara.evaluation.adaptive.enabled=false`
+2. Add feature flag `eventara.evaluation.adaptive.enabled` (set to `false` to disable)
 3. Keep `RealTimeRuleEvaluator.evaluateEvent()` as fallback
 4. Test both paths in parallel
 

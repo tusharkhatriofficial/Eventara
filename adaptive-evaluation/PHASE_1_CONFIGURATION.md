@@ -287,7 +287,7 @@ Add the following lines at the end of the file:
 # Adaptive Evaluation Configuration
 # =========================
 # Master switch - set to true to enable adaptive evaluation
-eventara.evaluation.adaptive.enabled=${EVENTARA_ADAPTIVE_ENABLED:false}
+eventara.evaluation.adaptive.enabled=${EVENTARA_ADAPTIVE_ENABLED:true}
 
 # Event rate thresholds (events per second)
 # Determines which evaluation interval tier is used
@@ -368,7 +368,7 @@ src/main/resources/
 
 | Property | Default | Description |
 |----------|---------|-------------|
-| `eventara.evaluation.adaptive.enabled` | `false` | Master switch |
+| `eventara.evaluation.adaptive.enabled` | `true` | Master switch |
 | `eventara.evaluation.adaptive.thresholds.idle` | `0.1` | EPS threshold for idle mode |
 | `eventara.evaluation.adaptive.thresholds.low` | `1.0` | EPS threshold for low traffic |
 | `eventara.evaluation.adaptive.thresholds.medium` | `10.0` | EPS threshold for medium traffic |

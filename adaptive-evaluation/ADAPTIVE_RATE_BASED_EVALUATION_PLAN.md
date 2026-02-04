@@ -98,7 +98,7 @@ public class AdaptiveEvaluationProperties {
 # =========================
 # Adaptive Evaluation Configuration
 # =========================
-eventara.evaluation.adaptive.enabled=${EVENTARA_ADAPTIVE_ENABLED:false}
+eventara.evaluation.adaptive.enabled=${EVENTARA_ADAPTIVE_ENABLED:true}
 
 # Event rate thresholds (events per second)
 eventara.evaluation.adaptive.thresholds.idle=0.1
