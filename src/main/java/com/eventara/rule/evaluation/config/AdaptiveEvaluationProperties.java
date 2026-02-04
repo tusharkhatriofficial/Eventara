@@ -124,4 +124,43 @@ public class AdaptiveEvaluationProperties {
     public void setIntervals(Intervals intervals) {
         this.intervals = intervals;
     }
+
+    // ========== Convenience Methods ==========
+
+    /**
+     * Get the appropriate interval for a given events-per-second rate.
+     * 
+     * @param eps Current events per second
+     * @return Interval in milliseconds
+     */
+    public long getIntervalForRate(double eps) {
+        if (eps < thresholds.idle)
+            return intervals.idleMs;
+        if (eps < thresholds.low)
+            return intervals.lowMs;
+        if (eps < thresholds.medium)
+            return intervals.mediumMs;
+        if (eps < thresholds.high)
+            return intervals.highMs;
+        return intervals.burstMs;
+    }
+
+    /**
+     * Get the traffic tier name for a given events-per-second rate.
+     * Useful for logging and monitoring.
+     * 
+     * @param eps Current events per second
+     * @return Tier name (IDLE, LOW, MEDIUM, HIGH, BURST)
+     */
+    public String getTierForRate(double eps) {
+        if (eps < thresholds.idle)
+            return "IDLE";
+        if (eps < thresholds.low)
+            return "LOW";
+        if (eps < thresholds.medium)
+            return "MEDIUM";
+        if (eps < thresholds.high)
+            return "HIGH";
+        return "BURST";
+    }
 }
