@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "PHASE_5_INTEGRATION.md",
+                "file": "PHASE_6_SCHEDULING.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "PHASE_5_INTEGRATION"
+              "title": "PHASE_6_SCHEDULING"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "PHASE_5_INTEGRATION.md",
+                "file": "PHASE_6_SCHEDULING.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for PHASE_5_INTEGRATION"
+              "title": "Backlinks for PHASE_6_SCHEDULING"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "PHASE_5_INTEGRATION.md",
+                "file": "PHASE_6_SCHEDULING.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from PHASE_5_INTEGRATION"
+              "title": "Outgoing links from PHASE_6_SCHEDULING"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "PHASE_5_INTEGRATION.md",
+                "file": "PHASE_6_SCHEDULING.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of PHASE_5_INTEGRATION"
+              "title": "Outline of PHASE_6_SCHEDULING"
             }
           }
         ]
@@ -185,9 +185,9 @@
   },
   "active": "8786535c2f4a5106",
   "lastOpenFiles": [
+    "PHASE_5_INTEGRATION.md",
     "PHASE_4_ADAPTIVE_RULE_EVALUATOR.md",
     "PHASE_6_SCHEDULING.md",
-    "PHASE_5_INTEGRATION.md",
     "PHASE_3_EVALUATION_KEY.md",
     "ADAPTIVE_RATE_BASED_EVALUATION_PLAN.md",
     "PHASE_2_EVENT_RATE_MONITOR.md",

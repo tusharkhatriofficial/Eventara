@@ -19,6 +19,8 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.eventara.rule.evaluation.RealTimeRuleEvaluator;
+import com.eventara.rule.evaluation.AdaptiveRuleEvaluator;
+import com.eventara.rule.evaluation.config.AdaptiveEvaluationProperties;
 
 @Service
 public class EventConsumer {
@@ -42,6 +44,12 @@ public class EventConsumer {
 
     @Autowired
     private RealTimeRuleEvaluator realTimeRuleEvaluator;
+
+    @Autowired
+    private AdaptiveRuleEvaluator adaptiveRuleEvaluator;
+
+    @Autowired
+    private AdaptiveEvaluationProperties adaptiveEvaluationProperties;
 
     /*
      * Listens to Kafka topic and processes events
@@ -96,7 +104,20 @@ public class EventConsumer {
             comprehensiveMetricsService.recordEvent(eventDto);
 
             // Evaluate threshold rules INSTANTLY on every event
-            realTimeRuleEvaluator.evaluateEvent(eventDto);
+            // realTimeRuleEvaluator.evaluateEvent(eventDto);
+            // -----------------------------------------------------------
+            // Rule Evaluation Strategy
+            // -----------------------------------------------------------
+            if (adaptiveEvaluationProperties.isEnabled()) {
+                // NEW: Adaptive Rate-Based Evaluation
+                // This is O(1) - just increments counters and sets a dirty flag
+                // The actual evaluation happens asynchronously in AdaptiveRuleEvaluator
+                adaptiveRuleEvaluator.onEventIngested(eventDto.isError());
+            } else {
+                // OLD: Per-Event Evaluation
+                // This is O(N*M) blocking call - evaluates all rules inline
+                realTimeRuleEvaluator.evaluateEvent(eventDto);
+            }
 
             logger.info("Successfully saved event to database: eventId={}, dbId={}",
                     savedEvent.getEventId(), savedEvent.getId());
