@@ -228,16 +228,28 @@ public class RedisMetricsService {
             return getMetricsLastMinutes(minutes);
         }
 
-        if (eventTypes.size() == 1) {
-            return getMetricsForEventType(eventTypes.get(0), minutes);
+        List<String> filteredTypes = eventTypes.stream()
+                .filter(Objects::nonNull)
+                .filter(t -> !t.isBlank())
+                .toList();
+
+        if (filteredTypes.isEmpty()) {
+            return getMetricsLastMinutes(minutes);
         }
 
-        MetricsBucket combined = new MetricsBucket(
-                Instant.now().minusSeconds(minutes * 60L),
-                Instant.now());
+        if (filteredTypes.size() == 1) {
+            return getMetricsForEventType(filteredTypes.get(0), minutes);
+        }
 
-        for (String eventType : eventTypes) {
-            MetricsBucket typeBucket = getMetricsForEventType(eventType, minutes);
+        long now = System.currentTimeMillis();
+        long windowStart = now - (minutes * 60 * 1000L);
+
+        MetricsBucket combined = new MetricsBucket(
+                Instant.ofEpochMilli(windowStart),
+                Instant.ofEpochMilli(now));
+
+        for (String eventType : filteredTypes) {
+            MetricsBucket typeBucket = aggregateBucketsForEventType(windowStart, now, eventType);
             combined.setTotalEvents(combined.getTotalEvents() + typeBucket.getTotalEvents());
             combined.setTotalErrors(combined.getTotalErrors() + typeBucket.getTotalErrors());
             combined.setLatencySum(combined.getLatencySum() + typeBucket.getLatencySum());
