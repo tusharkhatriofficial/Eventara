@@ -228,6 +228,8 @@ public class RedisMetricsService {
     /**
      * Get aggregated metrics for MULTIPLE EVENT TYPES in the last N minutes.
      * Combines metrics from all specified event types.
+     * Latency percentiles (P50/P95/P99) are approximated as latencyCount-weighted
+     * averages of per-type percentiles.
      *
      * @param eventTypes List of event types to include
      * @param minutes    Time window in minutes
@@ -587,9 +589,14 @@ public class RedisMetricsService {
         if (!allLatencies.isEmpty()) {
             Collections.sort(allLatencies);
             int size = allLatencies.size();
-            result.setLatencyP50((double) allLatencies.get((int) (size * 0.50)));
-            result.setLatencyP95((double) allLatencies.get((int) (size * 0.95)));
-            result.setLatencyP99((double) allLatencies.get(Math.min((int) (size * 0.99), size - 1)));
+            int lastIndex = size - 1;
+            int p50Index = (int) Math.floor(0.50 * lastIndex);
+            int p95Index = (int) Math.floor(0.95 * lastIndex);
+            int p99Index = (int) Math.floor(0.99 * lastIndex);
+
+            result.setLatencyP50((double) allLatencies.get(p50Index));
+            result.setLatencyP95((double) allLatencies.get(p95Index));
+            result.setLatencyP99((double) allLatencies.get(p99Index));
         }
 
         return result;
