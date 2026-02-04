@@ -141,15 +141,12 @@ public class AdaptiveRuleEvaluator {
         lastEvaluationTime = now;
 
         try {
-            try {
-                evaluateAllRulesGrouped();
-            } catch (Exception e) {
-                log.error("Error during adaptive rule evaluation", e);
-            } finally {
-                // Adjust the interval for the NEXT cycle based on current rate
-                adjustInterval();
-            }
+            evaluateAllRulesGrouped();
+        } catch (Exception e) {
+            log.error("Error during adaptive rule evaluation", e);
         } finally {
+            // Adjust the interval for the NEXT cycle based on current rate
+            adjustInterval();
             evaluating.set(false);
         }
     }
