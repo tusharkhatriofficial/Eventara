@@ -232,10 +232,8 @@ public class AdaptiveRuleEvaluator {
                 return redisMetrics.getMetricsForEventType(
                         key.getEventTypeFilter().get(0), key.getWindowMinutes());
             }
-            // Add multi-type support in RedisMetricsService if needed,
-            // for now fallback to separate calls or just first one
-            return redisMetrics.getMetricsForEventType(
-                    key.getEventTypeFilter().get(0), key.getWindowMinutes());
+            return redisMetrics.getMetricsForEventTypes(
+                    key.getEventTypeFilter(), key.getWindowMinutes());
         }
 
         // Option C: Global (All Events)

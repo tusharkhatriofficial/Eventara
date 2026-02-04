@@ -216,6 +216,49 @@ public class RedisMetricsService {
     }
 
     /**
+     * Get aggregated metrics for MULTIPLE EVENT TYPES in the last N minutes.
+     * Combines metrics from all specified event types.
+     *
+     * @param eventTypes List of event types to include
+     * @param minutes    Time window in minutes
+     * @return MetricsBucket with combined type metrics
+     */
+    public MetricsBucket getMetricsForEventTypes(List<String> eventTypes, int minutes) {
+        if (eventTypes == null || eventTypes.isEmpty()) {
+            return getMetricsLastMinutes(minutes);
+        }
+
+        if (eventTypes.size() == 1) {
+            return getMetricsForEventType(eventTypes.get(0), minutes);
+        }
+
+        MetricsBucket combined = new MetricsBucket(
+                Instant.now().minusSeconds(minutes * 60L),
+                Instant.now());
+
+        for (String eventType : eventTypes) {
+            MetricsBucket typeBucket = getMetricsForEventType(eventType, minutes);
+            combined.setTotalEvents(combined.getTotalEvents() + typeBucket.getTotalEvents());
+            combined.setTotalErrors(combined.getTotalErrors() + typeBucket.getTotalErrors());
+            combined.setLatencySum(combined.getLatencySum() + typeBucket.getLatencySum());
+            combined.setLatencyCount(combined.getLatencyCount() + typeBucket.getLatencyCount());
+
+            if (typeBucket.getLatencyMin() != null) {
+                if (combined.getLatencyMin() == null || typeBucket.getLatencyMin() < combined.getLatencyMin()) {
+                    combined.setLatencyMin(typeBucket.getLatencyMin());
+                }
+            }
+            if (typeBucket.getLatencyMax() != null) {
+                if (combined.getLatencyMax() == null || typeBucket.getLatencyMax() > combined.getLatencyMax()) {
+                    combined.setLatencyMax(typeBucket.getLatencyMax());
+                }
+            }
+        }
+
+        return combined;
+    }
+
+    /**
      * Get aggregated metrics for MULTIPLE SOURCES in the last N minutes.
      * Combines metrics from all specified sources.
      * 
