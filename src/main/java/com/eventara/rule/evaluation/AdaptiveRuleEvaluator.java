@@ -54,7 +54,7 @@ public class AdaptiveRuleEvaluator {
     private final AtomicBoolean dirtyFlag = new AtomicBoolean(false);
 
     /**
-     * Prevent concurrent evaluations if the scheduler triggers while an evaluation is still running.
+     * Guard to ensure only one evaluation runs at a time.
      */
     private final AtomicBoolean evaluating = new AtomicBoolean(false);
 
@@ -134,19 +134,25 @@ public class AdaptiveRuleEvaluator {
             return;
         }
 
-        // --- It's time to evaluate! ---
-
-        // Reset state for this cycle
-        dirtyFlag.set(false);
-        lastEvaluationTime = now;
+        boolean evaluated = false;
 
         try {
+            if (elapsed < currentIntervalMs || !dirtyFlag.compareAndSet(true, false)) {
+                return;
+            }
+
+            // --- It's time to evaluate! ---
+
+            lastEvaluationTime = now;
+            evaluated = true;
             evaluateAllRulesGrouped();
         } catch (Exception e) {
             log.error("Error during adaptive rule evaluation", e);
         } finally {
-            // Adjust the interval for the NEXT cycle based on current rate
-            adjustInterval();
+            if (evaluated) {
+                // Adjust the interval for the NEXT cycle based on current rate
+                adjustInterval();
+            }
             evaluating.set(false);
         }
     }
