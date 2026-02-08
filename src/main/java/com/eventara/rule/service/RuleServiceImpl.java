@@ -34,7 +34,7 @@ public class RuleServiceImpl implements RuleService {
     private final DrlGeneratorService drlGeneratorService;
     private final RuleCompilerService compilerService;
     private final RuleExecutionService ruleExecutionService;
-    private final com.eventara.rule.evaluation.RealTimeRuleEvaluator realTimeRuleEvaluator; // ← DEPENDENCY ADDED
+    private final com.eventara.rule.evaluation.AdaptiveRuleEvaluator adaptiveRuleEvaluator; // ← Use adaptive evaluator
 
     @Override
     public RuleResponse createRule(CreateRuleRequest request) {
@@ -183,7 +183,7 @@ public class RuleServiceImpl implements RuleService {
         if (updated.getStatus() == RuleStatus.ACTIVE) {
             ruleExecutionService.reloadRule(updated);
         }
-        realTimeRuleEvaluator.invalidateCache(); // Force refresh for instant evaluation
+        adaptiveRuleEvaluator.refreshRuleCache(); // Force refresh for instant evaluation
         // ==========================================================
 
         return mapToResponse(updated);
@@ -199,7 +199,7 @@ public class RuleServiceImpl implements RuleService {
         if (rule.getStatus() == RuleStatus.ACTIVE) {
             ruleExecutionService.unloadRule(rule.getName());
         }
-        realTimeRuleEvaluator.invalidateCache(); // Force refresh
+        adaptiveRuleEvaluator.refreshRuleCache(); // Force refresh
         // =======================================================
 
         ruleRepository.delete(rule);
@@ -232,7 +232,7 @@ public class RuleServiceImpl implements RuleService {
 
         // ===== UPDATED LOGIC: Load into execution engine =====
         ruleExecutionService.reloadRule(updated);
-        realTimeRuleEvaluator.invalidateCache(); // Force refresh
+        adaptiveRuleEvaluator.refreshRuleCache(); // Force refresh
         // =====================================================
 
         log.info("Rule enabled successfully: {}", id);
@@ -251,7 +251,7 @@ public class RuleServiceImpl implements RuleService {
 
         // ===== UPDATED LOGIC: Unload from execution engine =====
         ruleExecutionService.unloadRule(rule.getName());
-        realTimeRuleEvaluator.invalidateCache(); // Force refresh
+        adaptiveRuleEvaluator.refreshRuleCache(); // Force refresh
         // =======================================================
 
         log.info("Rule disabled successfully: {}", id);
@@ -270,7 +270,7 @@ public class RuleServiceImpl implements RuleService {
 
         // ===== UPDATED LOGIC: Unload from execution engine =====
         ruleExecutionService.unloadRule(rule.getName());
-        realTimeRuleEvaluator.invalidateCache(); // Force refresh
+        adaptiveRuleEvaluator.refreshRuleCache(); // Force refresh
         // =======================================================
 
         log.info("Rule archived successfully: {}", id);
