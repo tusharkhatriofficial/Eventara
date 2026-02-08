@@ -18,9 +18,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.eventara.rule.evaluation.RealTimeRuleEvaluator;
 import com.eventara.rule.evaluation.AdaptiveRuleEvaluator;
-import com.eventara.rule.evaluation.config.AdaptiveEvaluationProperties;
 
 @Service
 public class EventConsumer {
@@ -43,13 +41,7 @@ public class EventConsumer {
     private MetricsProperties metricsProperties;
 
     @Autowired
-    private RealTimeRuleEvaluator realTimeRuleEvaluator;
-
-    @Autowired
     private AdaptiveRuleEvaluator adaptiveRuleEvaluator;
-
-    @Autowired
-    private AdaptiveEvaluationProperties adaptiveEvaluationProperties;
 
     /*
      * Listens to Kafka topic and processes events
@@ -67,7 +59,6 @@ public class EventConsumer {
     @KafkaListener(topics = "${eventara.kafka.topics.events-raw}", groupId = "${spring.kafka.consumer.group-id}", containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void ConsumeEvent(
-            // @Payload Map<String, Object> payload,
             @Payload Event event,
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset,
@@ -76,12 +67,10 @@ public class EventConsumer {
 
             logger.info("Received message from Kafka: partition={}, offset={}", partition, offset);
 
-            // Event event = objectMapper.convertValue(payload, Event.class);
-
             logger.info("Processing event: eventId={}, eventType={}, source={}",
                     event.getEventId(), event.getEventType(), event.getSource());
 
-            // Cheking if event already exists (deduplication)
+            // Checking if event already exists (deduplication)
             if (eventRepository.existsByEventId(event.getEventId())) {
                 logger.warn("Event already exists in database, skipping: eventId={}",
                         event.getEventId());
@@ -103,21 +92,13 @@ public class EventConsumer {
             // Always record to old service for backward compatibility during migration
             comprehensiveMetricsService.recordEvent(eventDto);
 
-            // Evaluate threshold rules INSTANTLY on every event
-            // realTimeRuleEvaluator.evaluateEvent(eventDto);
             // -----------------------------------------------------------
-            // Rule Evaluation Strategy
+            // Rule Evaluation - Adaptive Rate-Based (Handler Pattern)
             // -----------------------------------------------------------
-            if (adaptiveEvaluationProperties.isEnabled()) {
-                // NEW: Adaptive Rate-Based Evaluation
-                // This is O(1) - just increments counters and sets a dirty flag
-                // The actual evaluation happens asynchronously in AdaptiveRuleEvaluator
-                adaptiveRuleEvaluator.onEventIngested(eventDto.isError());
-            } else {
-                // OLD: Per-Event Evaluation
-                // This is O(N*M) blocking call - evaluates all rules inline
-                realTimeRuleEvaluator.evaluateEvent(eventDto);
-            }
+            // O(1) operation - just increments counters and sets dirty flag
+            // Actual evaluation happens asynchronously via scheduled tick
+            // Supports ALL rule types: Simple, Composite, Ratio, RateOfChange
+            adaptiveRuleEvaluator.onEventIngested(eventDto.isError());
 
             logger.info("Successfully saved event to database: eventId={}, dbId={}",
                     savedEvent.getEventId(), savedEvent.getId());
@@ -136,15 +117,4 @@ public class EventConsumer {
 
         }
     }
-
-    // Optional: Listen to errors
-    // @org.springframework.kafka.annotation.KafkaListener(
-    // topics = "${eventara.kafka.topics.events-raw}",
-    // groupId = "${spring.kafka.consumer.group-id}-error",
-    // containerFactory = "kafkaListenerContainerFactory",
-    // errorHandler = "kafkaErrorHandler"
-    // )
-    // public void handleErrors(Exception exception) {
-    // logger.error("Kafka consumer error: {}", exception.getMessage(), exception);
-    // }
 }

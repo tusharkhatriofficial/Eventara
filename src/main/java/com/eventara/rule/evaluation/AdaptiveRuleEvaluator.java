@@ -8,6 +8,9 @@ import com.eventara.rule.entity.AlertRule;
 import com.eventara.rule.enums.RuleStatus;
 import com.eventara.rule.enums.RuleType;
 import com.eventara.rule.evaluation.config.AdaptiveEvaluationProperties;
+import com.eventara.rule.evaluation.handler.HandlerRegistry;
+import com.eventara.rule.evaluation.handler.RuleHandler;
+import com.eventara.rule.evaluation.model.EvaluationResult;
 import com.eventara.rule.repository.RuleRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -28,9 +32,15 @@ import java.util.stream.Collectors;
  * 1. Accumulates a "dirty flag" when events arrive (O(1))
  * 2. Ticks at a dynamic interval based on event rate
  * 3. On tick, fetches metrics ONCE per group (EvaluationKey)
- * 4. Evaluates all rules against the shared metrics
+ * 4. Evaluates all rules against shared metrics using specialized handlers
  * 
  * This reduces Redis load from O(events * rules) to O(rules / tick).
+ * 
+ * Supported rule types via Handler Pattern:
+ * - Simple Threshold (ERROR_RATE, AVG_LATENCY, etc.)
+ * - Composite Rules (AND/OR conditions)
+ * - Event Ratio (conversion rates)
+ * - Rate of Change (spike detection)
  */
 @Service
 @Slf4j
@@ -44,6 +54,7 @@ public class AdaptiveRuleEvaluator {
     private final AlertTriggerHandler alertHandler;
     private final MetricsProperties metricsProperties;
     private final StringRedisTemplate stringRedisTemplate;
+    private final HandlerRegistry handlerRegistry;
 
     // --- State ---
 
@@ -79,17 +90,14 @@ public class AdaptiveRuleEvaluator {
 
     private static final String COOLDOWN_PREFIX = "eventara:rule:cooldown:";
 
-    // Virtual metrics that shouldn't be evaluated here (handled elsewhere or
-    // complex)
-    private static final List<String> VIRTUAL_METRICS = List.of(
-            "EVENT_RATIO", "ERROR_RATE_CHANGE", "LATENCY_CHANGE");
-
     @PostConstruct
     public void init() {
         if (config.isEnabled()) {
             refreshRuleCache();
-            log.info("AdaptiveRuleEvaluator initialized: {} rules loaded. Initial interval={}ms",
-                    cachedRules != null ? cachedRules.size() : 0, currentIntervalMs);
+            log.info("AdaptiveRuleEvaluator initialized with {} handlers. {} rules loaded. Initial interval={}ms",
+                    handlerRegistry.getHandlerCount(),
+                    cachedRules.size(),
+                    currentIntervalMs);
         } else {
             log.info("AdaptiveRuleEvaluator is DISABLED via configuration");
         }
@@ -142,10 +150,10 @@ public class AdaptiveRuleEvaluator {
             }
 
             // --- It's time to evaluate! ---
-
             lastEvaluationTime = now;
             evaluated = true;
             evaluateAllRulesGrouped();
+
         } catch (Exception e) {
             log.error("Error during adaptive rule evaluation", e);
         } finally {
@@ -185,7 +193,7 @@ public class AdaptiveRuleEvaluator {
                 // Evaluate all rules in the group using the same bucket
                 for (AlertRule rule : groupRules) {
                     try {
-                        evaluateRuleAgainstBucket(rule, bucket, key.getWindowMinutes());
+                        evaluateRuleWithHandler(rule, bucket, key.getWindowMinutes());
                     } catch (Exception e) {
                         log.error("Failed to evaluate rule {}: {}", rule.getId(), e.getMessage());
                     }
@@ -193,6 +201,43 @@ public class AdaptiveRuleEvaluator {
             } catch (Exception e) {
                 log.error("Failed to fetch metrics for key {}: {}", key, e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Evaluate a rule using the appropriate handler from HandlerRegistry.
+     */
+    private void evaluateRuleWithHandler(AlertRule rule, MetricsBucket bucket, int windowMinutes) {
+        // Find the appropriate handler
+        Optional<RuleHandler> handler = handlerRegistry.findHandler(rule);
+
+        if (handler.isEmpty()) {
+            log.warn("No handler found for rule {} (type={}, config={})",
+                    rule.getId(),
+                    rule.getRuleType(),
+                    rule.getRuleConfig().get("metricType"));
+            return;
+        }
+
+        // Get cooldown from rule config
+        int cooldownMinutes = parseIntOrDefault(
+                rule.getRuleConfig().get("cooldownMinutes"), 5);
+
+        try {
+            // Delegate evaluation to the handler
+            Optional<EvaluationResult> result = handler.get().evaluate(rule, bucket, windowMinutes);
+
+            if (result.isPresent() && !isInCooldown(rule.getId(), cooldownMinutes)) {
+                EvaluationResult r = result.get();
+
+                log.info("🚨 ALARM: Rule '{}' triggered! Details: {}",
+                        rule.getName(), r.getDetails());
+
+                fireAlert(rule, r.getCurrentValue(), r.getThreshold());
+                setCooldown(rule.getId(), cooldownMinutes);
+            }
+        } catch (Exception e) {
+            log.error("Handler error for rule {}: {}", rule.getId(), e.getMessage(), e);
         }
     }
 
@@ -211,10 +256,7 @@ public class AdaptiveRuleEvaluator {
             String epsFormatted = String.format(java.util.Locale.US, "%.1f", eps);
             String tier = config.getTierForRate(eps);
             log.info("Traffic changed (eps={}). Adjusted interval: {}ms -> {}ms ({})",
-                    epsFormatted,
-                    oldInterval,
-                    newInterval,
-                    tier);
+                    epsFormatted, oldInterval, newInterval, tier);
         }
     }
 
@@ -244,96 +286,6 @@ public class AdaptiveRuleEvaluator {
 
         // Option C: Global (All Events)
         return redisMetrics.getMetricsLastMinutes(key.getWindowMinutes());
-    }
-
-    /**
-     * Evaluate a single rule against an already-fetched bucket.
-     */
-    @SuppressWarnings("unchecked")
-    private void evaluateRuleAgainstBucket(AlertRule rule, MetricsBucket bucket, int windowMinutes) {
-        Map<String, Object> configMap = rule.getRuleConfig();
-        if (configMap == null)
-            return;
-
-        // Skip composite/complex rules that aren't simple thresholds
-        if (configMap.containsKey("conditions"))
-            return;
-
-        String metricType = (String) configMap.get("metricType");
-
-        // Skip handling virtual metrics here (managed by specialized logic if needed)
-        if (metricType == null || isVirtualMetric(metricType))
-            return;
-
-        String condition = (String) configMap.get("condition");
-        Object thresholdObj = configMap.get("thresholdValue");
-        int cooldownMinutes = parseIntOrDefault(configMap.get("cooldownMinutes"), 5);
-
-        if (condition == null || thresholdObj == null)
-            return;
-
-        double threshold = parseDouble(thresholdObj);
-        double currentValue = getMetricValue(metricType, bucket, windowMinutes);
-
-        boolean crossed = isThresholdCrossed(condition, currentValue, threshold);
-
-        if (crossed) {
-            if (!isInCooldown(rule.getId(), cooldownMinutes)) {
-
-                log.info("ALARM: Rule '{}' crossed threshold! val={} {} thr={}",
-                        rule.getName(), currentValue, condition, threshold);
-
-                fireAlert(rule, currentValue, threshold);
-                setCooldown(rule.getId(), cooldownMinutes);
-            }
-        }
-    }
-
-    // --- Metrics Extraction ---
-
-    private double getMetricValue(String metricType, MetricsBucket bucket, int windowMinutes) {
-        if (bucket == null)
-            return 0.0;
-
-        switch (metricType) {
-            case "ERROR_RATE":
-                return bucket.getErrorRate();
-            case "TOTAL_ERRORS":
-                return bucket.getTotalErrors();
-            case "AVG_LATENCY":
-                return bucket.getAvgLatency();
-            case "TOTAL_EVENTS":
-                return bucket.getTotalEvents();
-            case "EVENTS_PER_MINUTE":
-                return bucket.getTotalEvents() / (double) Math.max(1, windowMinutes);
-            case "P95_LATENCY":
-                return bucket.getLatencyP95() != null ? bucket.getLatencyP95() : 0.0;
-            case "P99_LATENCY":
-                return bucket.getLatencyP99() != null ? bucket.getLatencyP99() : 0.0;
-            default:
-                return 0.0;
-        }
-    }
-
-    private boolean isVirtualMetric(String metricType) {
-        return VIRTUAL_METRICS.contains(metricType);
-    }
-
-    private boolean isThresholdCrossed(String condition, double current, double threshold) {
-        switch (condition) {
-            case "GREATER_THAN":
-                return current > threshold;
-            case "GREATER_THAN_OR_EQUAL":
-                return current >= threshold;
-            case "LESS_THAN":
-                return current < threshold;
-            case "LESS_THAN_OR_EQUAL":
-                return current <= threshold;
-            case "EQUALS":
-                return Math.abs(current - threshold) < 0.0001;
-            default:
-                return false;
-        }
     }
 
     // --- Cooldown Management ---
@@ -374,6 +326,7 @@ public class AdaptiveRuleEvaluator {
             List<AlertRule> freshRules = ruleRepository.findByRuleTypeAndStatus(RuleType.THRESHOLD, RuleStatus.ACTIVE);
             cachedRules = freshRules != null ? freshRules : List.of();
             lastRuleRefresh = System.currentTimeMillis();
+            log.debug("Rule cache refreshed: {} active rules", cachedRules.size());
         } catch (Exception e) {
             log.error("Failed to refresh rule cache", e);
             // Don't clear cache on error, keep using stale rules if possible
@@ -387,18 +340,6 @@ public class AdaptiveRuleEvaluator {
 
     public long getCurrentIntervalMs() {
         return currentIntervalMs;
-    }
-
-    private double parseDouble(Object value) {
-        if (value == null)
-            return 0.0;
-        if (value instanceof Number)
-            return ((Number) value).doubleValue();
-        try {
-            return Double.parseDouble(value.toString());
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
     }
 
     private int parseIntOrDefault(Object value, int defaultValue) {

@@ -188,6 +188,27 @@ public class RedisMetricsService {
     }
 
     /**
+     * Get metrics for a specific event type in the PREVIOUS window.
+     * Used for rate of change detection on specific event types.
+     *
+     * @param eventType     The event type to filter by
+     * @param windowMinutes Size of each window in minutes
+     * @return MetricsBucket for the previous window filtered by event type
+     */
+    public MetricsBucket getMetricsForEventTypePreviousWindow(String eventType, int windowMinutes) {
+        if (eventType == null || eventType.isEmpty()) {
+            return getMetricsPreviousWindow(windowMinutes);
+        }
+
+        long now = System.currentTimeMillis();
+        long windowMs = windowMinutes * 60 * 1000L;
+        long prevWindowEnd = now - windowMs;
+        long prevWindowStart = now - (2 * windowMs);
+
+        return aggregateBucketsForEventType(prevWindowStart, prevWindowEnd, eventType);
+    }
+
+    /**
      * Get aggregated metrics for a SPECIFIC SOURCE in the last N minutes.
      * This enables source-specific threshold rule evaluation.
      * 
