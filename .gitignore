@@ -33,3 +33,6 @@ build/
 .vscode/
 
 /docs
+
+.DS_Store
+adaptive-evaluation/.obsidian/
