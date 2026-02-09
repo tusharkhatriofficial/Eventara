@@ -44,7 +44,7 @@ public class WebhookNotificationHandler {
                 long startTime = System.currentTimeMillis();
 
                 // Build webhook payload
-                Map<String, Object> payload = buildWebhookPayload(message);
+                Map<String, Object> payload = buildWebhookPayload(message, webhookUrl);
 
                 // Build HTTP headers
                 HttpHeaders headers = buildHeaders(channel);
@@ -146,8 +146,20 @@ public class WebhookNotificationHandler {
 
     /**
      * Build webhook payload from notification message
+     * Detects specific webhook providers (Discord, Slack) and formats accordingly
      */
-    private Map<String, Object> buildWebhookPayload(NotificationMessage message) {
+    private Map<String, Object> buildWebhookPayload(NotificationMessage message, String webhookUrl) {
+        // Detect Discord webhooks and format appropriately
+        if (webhookUrl != null && webhookUrl.contains("discord.com/api/webhooks")) {
+            return buildDiscordPayload(message);
+        }
+
+        // Detect Slack webhooks and format appropriately
+        if (webhookUrl != null && webhookUrl.contains("hooks.slack.com")) {
+            return buildSlackPayload(message);
+        }
+
+        // Generic webhook payload
         Map<String, Object> payload = new HashMap<>();
         payload.put("alertId", message.getAlertId());
         payload.put("ruleName", message.getRuleName());
@@ -162,6 +174,75 @@ public class WebhookNotificationHandler {
             payload.put("context", message.getContext());
         }
 
+        return payload;
+    }
+
+    /**
+     * Build Discord-compatible webhook payload
+     * Discord requires 'content' field or 'embeds' array
+     */
+    private Map<String, Object> buildDiscordPayload(NotificationMessage message) {
+        Map<String, Object> payload = new HashMap<>();
+
+        // Build a rich content message for Discord
+        StringBuilder content = new StringBuilder();
+        content.append("**").append(message.getSubject() != null ? message.getSubject() : "🚨 Alert Triggered")
+                .append("**\n\n");
+
+        if (message.getRuleName() != null) {
+            content.append("📋 **Rule:** ").append(message.getRuleName()).append("\n");
+        }
+        if (message.getSeverity() != null) {
+            String severityEmoji = switch (message.getSeverity()) {
+                case CRITICAL -> "🔴";
+                case WARNING -> "🟠";
+                case INFO -> "🔵";
+            };
+            content.append(severityEmoji).append(" **Severity:** ").append(message.getSeverity()).append("\n");
+        }
+        if (message.getMessage() != null) {
+            content.append("\n").append(message.getMessage()).append("\n");
+        }
+        if (message.getThresholdValue() != null) {
+            content.append("\n📊 **Threshold:** ").append(message.getThresholdValue());
+        }
+        if (message.getActualValue() != null) {
+            content.append(" | **Actual:** ").append(message.getActualValue());
+        }
+        if (message.getTriggeredAt() != null) {
+            content.append("\n⏰ ").append(message.getTriggeredAt().toString());
+        }
+
+        payload.put("content", content.toString());
+        return payload;
+    }
+
+    /**
+     * Build Slack-compatible webhook payload
+     * Slack requires 'text' field
+     */
+    private Map<String, Object> buildSlackPayload(NotificationMessage message) {
+        Map<String, Object> payload = new HashMap<>();
+
+        StringBuilder text = new StringBuilder();
+        text.append("*").append(message.getSubject() != null ? message.getSubject() : "🚨 Alert Triggered")
+                .append("*\n\n");
+
+        if (message.getRuleName() != null) {
+            text.append("• *Rule:* ").append(message.getRuleName()).append("\n");
+        }
+        if (message.getSeverity() != null) {
+            text.append("• *Severity:* ").append(message.getSeverity()).append("\n");
+        }
+        if (message.getMessage() != null) {
+            text.append("\n").append(message.getMessage()).append("\n");
+        }
+        if (message.getThresholdValue() != null && message.getActualValue() != null) {
+            text.append("\n_Threshold:_ ").append(message.getThresholdValue())
+                    .append(" | _Actual:_ ").append(message.getActualValue());
+        }
+
+        payload.put("text", text.toString());
         return payload;
     }
 

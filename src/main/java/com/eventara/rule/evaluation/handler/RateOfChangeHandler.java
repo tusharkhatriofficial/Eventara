@@ -87,10 +87,17 @@ public class RateOfChangeHandler implements RuleHandler {
 
         if (crossed) {
             String arrow = percentChange >= 0 ? "↑" : "↓";
-            String details = String.format("%s: %.1f%% %s (%.2f → %.2f) %s %.1f%%",
-                    metricType, Math.abs(percentChange), arrow,
-                    previousValue, currentValue,
-                    condSymbol(condition), threshold);
+            String details;
+            if (previousValue == 0 && currentValue > 0) {
+                // Spike from zero - show cleaner message
+                details = String.format("%s: SPIKE DETECTED (0 → %.2f) - new errors appeared",
+                        metricType, currentValue);
+            } else {
+                details = String.format("%s: %.1f%% %s (%.2f → %.2f) %s %.1f%%",
+                        metricType, Math.abs(percentChange), arrow,
+                        previousValue, currentValue,
+                        condSymbol(condition), threshold);
+            }
 
             log.info("Rule {} RATE_OF_CHANGE triggered: {}", rule.getName(), details);
             return Optional.of(new EvaluationResult(percentChange, threshold, details));
@@ -123,8 +130,9 @@ public class RateOfChangeHandler implements RuleHandler {
 
     private double calculatePercentChange(double current, double previous) {
         if (previous == 0) {
-            // Handle zero previous value
-            return current > 0 ? 100.0 : 0;
+            // Handle zero previous value - return very large % change for spike detection
+            // 999% ensures GREATER_THAN thresholds like > 100% will trigger
+            return current > 0 ? 999.0 : 0;
         }
         return ((current - previous) / previous) * 100.0;
     }

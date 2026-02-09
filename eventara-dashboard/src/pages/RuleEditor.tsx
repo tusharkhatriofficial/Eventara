@@ -714,6 +714,7 @@ export const RuleEditor: React.FC = () => {
                       <div className="flex gap-2">
                         <input
                           type="text"
+                          id="simple-source-filter-input"
                           className="input-modern flex-1"
                           placeholder="e.g., auth-service, payment-service"
                           onKeyDown={(e) => {
@@ -727,6 +728,20 @@ export const RuleEditor: React.FC = () => {
                             }
                           }}
                         />
+                        <button
+                          type="button"
+                          className="btn-secondary px-4"
+                          onClick={() => {
+                            const input = document.getElementById('simple-source-filter-input') as HTMLInputElement;
+                            const value = input?.value?.trim();
+                            if (value) {
+                              addToArray('sourceFilter', value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </button>
                       </div>
                       {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -891,6 +906,7 @@ export const RuleEditor: React.FC = () => {
                       <div className="flex gap-2">
                         <input
                           type="text"
+                          id="composite-source-filter-input"
                           className="input-modern flex-1"
                           placeholder="e.g., auth-service"
                           onKeyDown={(e) => {
@@ -904,6 +920,20 @@ export const RuleEditor: React.FC = () => {
                             }
                           }}
                         />
+                        <button
+                          type="button"
+                          className="btn-secondary px-4"
+                          onClick={() => {
+                            const input = document.getElementById('composite-source-filter-input') as HTMLInputElement;
+                            const value = input?.value?.trim();
+                            if (value) {
+                              addToArray('sourceFilter', value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </button>
                       </div>
                       {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -1080,6 +1110,7 @@ export const RuleEditor: React.FC = () => {
                       <div className="flex gap-2">
                         <input
                           type="text"
+                          id="change-source-filter-input"
                           className="input-modern flex-1"
                           placeholder="e.g., payment-service"
                           onKeyDown={(e) => {
@@ -1093,6 +1124,20 @@ export const RuleEditor: React.FC = () => {
                             }
                           }}
                         />
+                        <button
+                          type="button"
+                          className="btn-secondary px-4"
+                          onClick={() => {
+                            const input = document.getElementById('change-source-filter-input') as HTMLInputElement;
+                            const value = input?.value?.trim();
+                            if (value) {
+                              addToArray('sourceFilter', value);
+                              input.value = '';
+                            }
+                          }}
+                        >
+                          Add
+                        </button>
                       </div>
                       {((form as any).ruleConfig?.sourceFilter || []).length > 0 && (
                         <div className="flex flex-wrap gap-2">
