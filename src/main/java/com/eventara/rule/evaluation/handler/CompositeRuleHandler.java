@@ -81,6 +81,9 @@ public class CompositeRuleHandler implements RuleHandler {
             double currentValue = simpleHandler.getMetricValue(metricType, bucket, windowMinutes);
             boolean conditionMet = simpleHandler.isThresholdCrossed(condOp, currentValue, threshold);
 
+            log.info("Composite condition: {} = {} {} {} -> {}",
+                    metricType, currentValue, condOp, threshold, conditionMet ? "MET" : "NOT MET");
+
             if (conditionMet)
                 metCount++;
 
