@@ -11,16 +11,15 @@
   # See it before your users do
 </div>
 
-
 <div align="center">
-  <h3>Real-time event analytics and intelligent alerting you can self-host</h3>
-  <p>Kafka-powered ingestion, live dashboards, and rule-based alerts for engineers who want control.</p>
+  <h3>Open-source, self-hosted event monitoring with real-time analytics and intelligent alerting</h3>
+  <p>Kafka-powered ingestion. TimescaleDB + Redis metrics. Intelligent alerting. Live dashboards. One <code>docker compose up</code>.</p>
 
   <p>
     <a href="./LICENSE">
       <img alt="License" src="https://img.shields.io/badge/license-Apache%202.0-blue.svg">
     </a>
-    <a href="#quick-start-docker">
+    <a href="#quick-start">
       <img alt="Docker Ready" src="https://img.shields.io/badge/docker-ready-blue">
     </a>
     <a href="https://kafka.apache.org/">
@@ -35,19 +34,18 @@
   </p>
 
   <p>
+    <a href="https://eventara-docs.vercel.app">Docs</a>
+    ·
     <a href="https://github.com/tusharkhatriofficial/eventara/issues">Issues</a>
     ·
     <a href="https://github.com/tusharkhatriofficial/eventara/discussions">Discussions</a>
     ·
-    <a href="#quick-start-docker">Quick start</a>
-    ·
-    <a href="#architecture">Architecture</a>
-    ·
-    <a href="#roadmap">Roadmap</a>
+    <a href="#quick-start">Quick Start</a>
   </p>
-  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 04 28 PM" src="https://github.com/user-attachments/assets/030e2526-0e85-474c-94f2-940920de438b" />
-  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 25 PM" src="https://github.com/user-attachments/assets/5c4641bb-4838-40c4-8629-ba0caabb3632" />
-  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 52 PM" src="https://github.com/user-attachments/assets/15989697-e6cd-4c07-a2d8-5cdb81e3f221" />
+
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 04 28 PM" src="https://github.com/user-attachments/assets/030e2526-0e85-474c-94f2-940920de438b" />
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 25 PM" src="https://github.com/user-attachments/assets/5c4641bb-4838-40c4-8629-ba0caabb3632" />
+  <img width="1646" height="890" alt="Screenshot 2026-01-28 at 2 06 52 PM" src="https://github.com/user-attachments/assets/15989697-e6cd-4c07-a2d8-5cdb81e3f221" />
 
 </div>
 
@@ -55,342 +53,182 @@
 
 ## Why Eventara
 
-Eventara is an open-source platform for real-time event monitoring, analytics, and alerting. You stream events from your services, visualize live behavior, detect anomalies, and route alerts to the right place without handing your data to a vendor.
+Every company that scales past a handful of services needs event monitoring. The options today are either expensive SaaS platforms where you hand over your data, or stitching together 5+ open-source tools yourself.
 
-Use Eventara when you want:
-- A self-hosted alternative to expensive observability and monitoring tools
-- Low-latency insights on product and system events
-- A customizable pipeline for analytics plus alerting, built on Kafka
+Eventara is a single, self-hosted platform that handles ingestion, streaming, real-time analytics, threshold alerting, and live dashboards out of the box. You keep your data. You control the pipeline. You deploy with one command.
 
 ---
 
-## What you can build
+## What it does today (v0.1.1)
 
-Common use cases:
-- Detect payment failures and notify on-call instantly
-- Monitor signup or checkout rate drops in real time
-- Track API error spikes and latency regressions
-- Analyze event-type trends live while shipping features
-- Stream IoT signals and trigger actions on anomalies
+**Ingestion** -- REST API accepts events from any service, language, or platform. Events flow into Kafka for ordered, durable, high-throughput delivery.
+
+**Real-time analytics** -- Redis sliding-window aggregation for sub-second metrics. TimescaleDB hypertables for time-series storage with automatic compression and continuous aggregates. Metrics roll up from Redis to TimescaleDB every 60 seconds.
+
+**4 threshold rule types** -- evaluated in real time by a Java handler engine:
+
+| Rule Type | What it does |
+|---|---|
+| **Simple Threshold** | Fire when a metric crosses a boundary (error rate > 10%) |
+| **Composite** | AND/OR logic across multiple conditions (error rate > 10% AND latency > 500ms) |
+| **Event Ratio** | Track ratios between event types (payment.failed / payment.total > 0.05) |
+| **Rate of Change** | Detect spikes and drops (throughput fell 30% in 5 minutes) |
+
+Drools is used under the hood for DRL generation, syntax validation, and the rule-testing API -- but the hot-path evaluation is pure Java for maximum throughput.
+
+**Adaptive evaluation** -- the engine adjusts its polling interval based on traffic volume. 30s at idle, 100ms during bursts. No wasted compute when things are quiet, instant sensitivity when they are not.
+
+**Live dashboard** -- React 19 + Vite + Chart.js with WebSocket push updates every second. Rule editor with visual composite builder, ratio config, and source/event filters.
+
+**Webhook notifications** -- alert channels with webhook delivery when rules fire.
 
 ---
 
-## Key capabilities
+## Quick Start
 
-- Real-time ingestion API for events
-- Kafka-backed streaming pipeline
-- Live dashboard with WebSocket updates (no refresh)
-- Metrics endpoints for system health and throughput
-- Extensible roadmap for rule engine and multi-channel alerting
-
----
-
-## Quick start (Docker)
-
-### Prerequisites
-- Docker and Docker Compose
-- Git
-
-### Run all services
 ```bash
 git clone https://github.com/tusharkhatriofficial/eventara.git
 cd eventara
 docker compose up --build -d
-docker compose logs -f
 ```
 
-### Open the UI and services
-| Service | URL | Purpose |
-|---|---|---|
-| Dashboard | http://localhost:5173 | Real-time analytics UI |
-| API | http://localhost:8080 | Event ingestion and metrics |
-| Kafka UI | http://localhost:8090 | Topics and messages |
+| Service | URL |
+|---|---|
+| Dashboard | http://localhost:5173 |
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger-ui.html |
+| Kafka UI | http://localhost:8090 |
 
----
-
-## Send your first event
+### Send your first event
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/events \
   -H "Content-Type: application/json" \
   -d '{
-    "eventType": "user.login",
-    "source": "auth-service",
-    "userId": "test_user_123",
-    "severity": "INFO"
+    "eventType": "payment.failed",
+    "source": "payment-service",
+    "userId": "user_123",
+    "severity": "ERROR"
   }'
 ```
 
-Then open the dashboard at http://localhost:5173 and verify updates arrive in real time.
-
----
-
-## Demo traffic (20-second showcase)
-
-### macOS zsh / Linux bash
-```bash
-for i in {1..60}; do
-  curl -s -X POST http://localhost:8080/api/v1/events \
-    -H "Content-Type: application/json" \
-    -d '{"eventType":"user.login","source":"auth-service","userId":"user_1","severity":"INFO"}' >/dev/null
-
-  curl -s -X POST http://localhost:8080/api/v1/events \
-    -H "Content-Type: application/json" \
-    -d '{"eventType":"payment.success","source":"payment-service","userId":"user_2","severity":"INFO"}' >/dev/null
-
-  curl -s -X POST http://localhost:8080/api/v1/events \
-    -H "Content-Type: application/json" \
-    -d '{"eventType":"order.created","source":"order-service","userId":"user_3","severity":"WARNING"}' >/dev/null
-
-  curl -s -X POST http://localhost:8080/api/v1/events \
-    -H "Content-Type: application/json" \
-    -d '{"eventType":"payment.failed","source":"payment-service","userId":"user_4","severity":"ERROR"}' >/dev/null
-
-  sleep 0.3
-done
-```
-
-### Windows PowerShell
-```powershell
-for ($i = 1; $i -le 60; $i++) {
-  curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
-    -Headers @{ "Content-Type"="application/json" } `
-    -Body '{"eventType":"user.login","source":"auth-service","userId":"user_1","severity":"INFO"}' | Out-Null
-
-  curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
-    -Headers @{ "Content-Type"="application/json" } `
-    -Body '{"eventType":"payment.success","source":"payment-service","userId":"user_2","severity":"INFO"}' | Out-Null
-
-  curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
-    -Headers @{ "Content-Type"="application/json" } `
-    -Body '{"eventType":"order.created","source":"order-service","userId":"user_3","severity":"WARNING"}' | Out-Null
-
-  curl -s -Method POST -Uri "http://localhost:8080/api/v1/events" `
-    -Headers @{ "Content-Type"="application/json" } `
-    -Body '{"eventType":"payment.failed","source":"payment-service","userId":"user_4","severity":"ERROR"}' | Out-Null
-
-  Start-Sleep -Milliseconds 300
-}
-```
-
----
-
-## Dashboard
-
-Current pages:
-- Overview: key metrics, health, live charts
-- Real-time monitoring: live stream and throughput
-- Event analytics: event types, patterns, trends
-- Source analytics: planned improvements
-- Error analysis: planned improvements
-- Performance metrics: planned improvements
-
-Data updates live via WebSocket.
+Open the dashboard. Events appear in real time.
 
 ---
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  A[Your services: microservices, APIs, IoT, mobile] -->|HTTP events| B[Ingestion API Spring Boot]
-  B --> C[Kafka]
-  C --> D[Analytics engine Kafka Streams]
-  B --> E[(PostgreSQL)]
-  D --> E
-  D --> F[WebSocket gateway]
-  F --> G[Dashboard React + TS]
+```
+Your Services --> REST API (Spring Boot) --> Kafka --> Redis (real-time metrics)
+                                              |                |
+                                              v                v
+                                        TimescaleDB      Drools Engine
+                                              |                |
+                                              v                v
+                                        Flyway Schema    WebSocket (STOMP)
+                                                               |
+                                                               v
+                                                     Dashboard (React + Vite)
 ```
 
-Design goals:
-- Keep ingestion fast and durable using Kafka
-- Separate real-time views from storage for scalability
-- Make alerting a first-class, pluggable layer
+6 containers. One Docker Compose file. Full stack in 30 seconds.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Runtime | Java 21, Spring Boot 3.5.7 |
+| Messaging | Apache Kafka 7.5.0 (Confluent) |
+| Time-series | TimescaleDB (PostgreSQL 14) |
+| Cache / Metrics | Redis 7 |
+| Rule Engine | Java handler pattern (Drools for DRL validation) |
+| Migrations | Flyway (7 migrations) |
+| Frontend | React 19, Vite 7, Tailwind CSS, Chart.js |
+| Real-time | WebSocket via STOMP + SockJS |
+| API Docs | SpringDoc OpenAPI 2.7 |
+| Deploy | Docker Compose |
 
 ---
 
 ## API
 
-### Create event
-`POST /api/v1/events`
-
-```json
-{
-  "eventType": "user.signup",
-  "source": "web-app",
-  "userId": "user_456",
-  "severity": "INFO",
-  "tags": {
-    "campaign": "summer_sale"
-  },
-  "metadata": {
-    "plan": "premium"
-  }
-}
-```
-
-### Get metrics
-`GET /api/v1/metrics`
-
-### Query events
-`GET /api/v1/events/type/payment.failed?page=0&size=10`
-
----
-
-## Tech stack
-
-| Layer | Tech |
-|---|---|
-| Backend | Spring Boot (Java 21) |
-| Messaging | Apache Kafka |
-| Storage | PostgreSQL (TimescaleDB planned) |
-| Real-time | WebSocket |
-| Frontend | React + TypeScript + Vite |
-| Styling | Tailwind CSS |
-| Charts | Chart.js |
-| Streaming analytics | Kafka Streams |
-| Deployment | Docker (Kubernetes-ready) |
-| Planned | Redis, Prometheus, Grafana, gRPC |
-
----
-
-## Operations (Docker)
-
 ```bash
-# Start
-docker compose up --build -d
+# Ingest event
+POST /api/v1/events
 
-# Logs
-docker compose logs -f springboot
-docker compose logs -f dashboard
-docker compose logs -f kafka
+# Get metrics
+GET /api/v1/metrics
 
-# Status
-docker compose ps
+# Query events by type
+GET /api/v1/events/type/{type}?page=0&size=10
 
-# Stop
-docker compose down
+# Alert rules CRUD
+POST /api/v1/rules
+GET /api/v1/rules
+PUT /api/v1/rules/{id}
+DELETE /api/v1/rules/{id}
 
-# Wipe data (DB + Kafka)
-docker compose down -v
+# Test rule evaluation
+POST /api/v1/rules/{id}/test
 ```
 
-Useful:
-```bash
-docker exec -it postgres14 psql -U postgres -d eventara
-docker exec -it eventara-kafka kafka-topics --bootstrap-server localhost:9092 --list
-```
+Full API docs at `https://www.eventara.co/introduction`.
 
 ---
 
 ## Roadmap
 
-### Phase 1: Foundation ✅
-- Architecture and Docker baseline
-- Ingestion service and REST API
-- Kafka producer/consumer integration
-- PostgreSQL storage
-
-### Phase 2: Real-time analytics ✅
-- WebSocket streaming
-- Metrics service
-- React dashboard pages
-
-### Phase 3: Rule engine and alerting 🚧
-- Rule definition engine ✅
-- Threshold-based alerting 🚧
-- Notifications: Email, Slack, Webhook
-- Alert acknowledgment workflow
-
-### Phase 4: Advanced features ⏳
-- Time-series storage (TimescaleDB)
-- Historical analytics and query improvements
-- Custom dashboards
-- Export: CSV, JSON
-- Authentication and authorization
-
-### Phase 5: Production readiness ⏳
-- Redis caching
-- Horizontal scaling guidance
-- Kubernetes manifests
-- Prometheus and Grafana
-- Production deployment guides
-
----
-
-## Troubleshooting
-
-### Dashboard stuck on connecting
-- Check backend logs: `docker compose logs -f springboot`
-- Restart: `docker compose restart springboot dashboard`
-- Confirm the API is reachable: `curl http://localhost:8080/api/v1/metrics`
-
-### No events appearing
-- List Kafka topics:
-  ```bash
-  docker exec -it eventara-kafka kafka-topics --bootstrap-server localhost:9092 --list
-  ```
-- Check consumer logs: `docker compose logs -f springboot`
-
-### Port already in use
-Change host ports in `docker-compose.yml` (for example `5174:5173`, `8081:8080`, `5433:5432`).
+- [x] Event ingestion + Kafka pipeline
+- [x] Real-time dashboard with WebSocket
+- [x] TimescaleDB time-series storage
+- [x] Redis distributed metrics
+- [x] 4 threshold rule types (Simple, Composite, Ratio, Rate of Change)
+- [x] Adaptive evaluation engine
+- [x] Webhook notification channel
+- [ ] Multi-channel alerts (Slack, PagerDuty, email)
+- [ ] gRPC ingestion endpoint
+- [ ] Anomaly detection and forecasting rules
+- [ ] Kubernetes Helm chart
+- [ ] Authentication and RBAC
 
 ---
 
 ## Contributing
 
-Contributions are welcome from engineers learning Spring Boot, Kafka, React, and DevOps, and from teams who want a self-hosted analytics and alerting platform.
+Contributions welcome. Whether you are learning Spring Boot and Kafka, or you want a self-hosted monitoring platform for your team.
 
-How to contribute:
-- Pick an Issue (look for "good first issue")
-- Propose features in Discussions
-- Improve docs, tests, and examples
-
-### Development setup (local)
-
-Backend:
 ```bash
+# Backend
 mvn spring-boot:run
+
+# Frontend
+cd eventara-dashboard && npm install && npm run dev
 ```
 
-Frontend:
-```bash
-cd eventara-dashboard
-npm install
-npm run dev
-```
+1. Fork and create a branch
+2. Make your changes
+3. Open a Pull Request
 
-### Pull request workflow
-1. Fork the repository
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit: `git commit -m "Add your feature"`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
+Look for issues tagged `good first issue` to get started.
 
 ---
 
 ## License
 
-Licensed under the Apache License 2.0. See `LICENSE`.
-
----
-
-## Community
-
-- **Issues:** https://github.com/tusharkhatriofficial/eventara/issues
-- **Discussions:** https://github.com/tusharkhatriofficial/eventara/discussions
-- **Email:** hello@tusharkhatri.in
+Apache 2.0. See [LICENSE](./LICENSE).
 
 ---
 
 <div align="center">
+  <p>
+    <a href="https://eventara-docs.vercel.app">Documentation</a>
+    ·
+    <a href="https://github.com/tusharkhatriofficial/eventara/issues">Issues</a>
+    ·
+    <a href="https://github.com/tusharkhatriofficial/eventara/discussions">Discussions</a>
+  </p>
 
-### ⭐ Star this repo if you find it useful!
-
-**Built with ❤️ for the developer community**
-
-[![GitHub stars](https://img.shields.io/github/stars/tusharkhatriofficial/eventara?style=social)](https://github.com/tusharkhatriofficial/eventara)
-[![GitHub forks](https://img.shields.io/github/forks/tusharkhatriofficial/eventara?style=social)](https://github.com/tusharkhatriofficial/eventara)
-[![GitHub watchers](https://img.shields.io/github/watchers/tusharkhatriofficial/eventara?style=social)](https://github.com/tusharkhatriofficial/eventara)
-
+  <sub>Built by <a href="https://github.com/tusharkhatriofficial">Tushar Khatri</a></sub>
 </div>
