@@ -1,12 +1,14 @@
 <div align="center">
-  <picture>
+  <!-- <picture> -->
     <!-- Dark Mode Image -->
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/99d3120a-4f56-4898-ba51-d6b5c0f14d02">
+    <!-- <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/99d3120a-4f56-4898-ba51-d6b5c0f14d02"> -->
     <!-- Light Mode Image -->
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6">
+    <!-- <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6"> -->
     <!-- Fallback / Default Image (REQUIRED) -->
-    <img alt="Eventara Logo" src="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6" width="500">
-  </picture>
+    <!-- <img alt="Eventara Logo" src="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6" width="500"> -->
+  <!-- </picture> -->
+  <img width="534" height="401" alt="ChatGPT Image Feb 11, 2026, 03_08_11 PM copy" src="https://github.com/user-attachments/assets/22289a9e-b4bd-4c69-a94a-0bf738dda21a" />
+
   
   # See it before your users do
 </div>
