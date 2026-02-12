@@ -7,7 +7,7 @@
     <!-- Fallback / Default Image (REQUIRED) -->
     <!-- <img alt="Eventara Logo" src="https://github.com/user-attachments/assets/addfaf5d-5bbe-45b2-a929-0ca7a9d48fd6" width="500"> -->
   <!-- </picture> -->
-  <img width="534" height="401" alt="ChatGPT Image Feb 11, 2026, 03_08_11 PM copy" src="https://github.com/user-attachments/assets/22289a9e-b4bd-4c69-a94a-0bf738dda21a" />
+  <img width="334" height="201" alt="ChatGPT Image Feb 11, 2026, 03_08_11 PM copy" src="https://github.com/user-attachments/assets/22289a9e-b4bd-4c69-a94a-0bf738dda21a" />
 
   
   # See it before your users do
