@@ -8,7 +8,7 @@
 # Rule 3: Checkout Conversion Drop - checkout.success/checkout.started < 0.7 (min 5 events)
 # Rule 4: Error Rate Anomaly - ERROR_RATE_CHANGE > 100%
 
-API_URL="${API_URL:-http://localhost:8080/api/v1/events}"
+API_URL="${API_URL:-http://localhost/api/v1/events}"
 
 echo ""
 echo "EVENTARA YC DEMO - Triggering All 4 Rules"
