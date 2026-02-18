@@ -7,15 +7,23 @@ interface UseWebSocketMetricsReturn extends UseWebSocketReturn {
   metrics: ComprehensiveMetrics | null;
 }
 
-export const useWebSocketMetrics = (url: string = `${import.meta.env.VITE_API_URL || 'http://localhost:8080'}/ws`): UseWebSocketMetricsReturn => {
+// Derive WebSocket URL from the current page location so it works on any deployment
+const getDefaultWsUrl = (): string => {
+  if (import.meta.env.VITE_API_URL) return `${import.meta.env.VITE_API_URL}/ws`;
+  // In production, use the same origin as the page (works for VPS, Coolify, etc.)
+  if (typeof window !== 'undefined') return `${window.location.origin}/ws`;
+  return 'http://localhost:8080/ws';
+};
+
+export const useWebSocketMetrics = (url: string = getDefaultWsUrl()): UseWebSocketMetricsReturn => {
   const [metrics, setMetrics] = useState<ComprehensiveMetrics | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>(ConnectionState.CONNECTING);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const clientRef = useRef<Client | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  
+
   const MAX_RECONNECT_ATTEMPTS = 10;
   const RECONNECT_INTERVAL = 3000; // 3 seconds
 
@@ -80,13 +88,13 @@ export const useWebSocketMetrics = (url: string = `${import.meta.env.VITE_API_UR
       stompClient.onWebSocketClose = () => {
         console.log('🔌 WebSocket connection closed');
         setConnectionState(ConnectionState.DISCONNECTED);
-        
+
         // Attempt reconnection
         if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
           reconnectAttemptsRef.current++;
           console.log(`Reconnecting... (Attempt ${reconnectAttemptsRef.current}/${MAX_RECONNECT_ATTEMPTS})`);
           setConnectionState(ConnectionState.RECONNECTING);
-          
+
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, RECONNECT_INTERVAL);
@@ -111,12 +119,12 @@ export const useWebSocketMetrics = (url: string = `${import.meta.env.VITE_API_UR
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
     }
-    
+
     if (clientRef.current) {
       clientRef.current.deactivate();
       clientRef.current = null;
     }
-    
+
     setConnectionState(ConnectionState.DISCONNECTED);
     console.log('🔌 Disconnected');
   }, []);
