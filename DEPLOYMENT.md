@@ -1,37 +1,57 @@
-# Deployment (Docker image)
+# Deployment
 
-This guide is the fastest way to run Eventara on a single VM using Docker.
+Deploy Eventara on any VPS with Docker.
 
 ## Prerequisites
 
-- Docker Engine + Docker Compose plugin installed
-- A VM with ~2 CPU / 4 GB RAM is usually fine for a quick demo
+- Docker Engine + Docker Compose plugin
+- ~2 CPU / 4 GB RAM (minimum)
 
-## Quick deploy (recommended)
-
-1. Clone the repo and create your env file:
+## Quick deploy
 
 ```bash
 git clone https://github.com/tusharkhatriofficial/eventara.git
 cd eventara
-
 cp .env.example .env
-```
+# Edit .env — at minimum change POSTGRES_PASSWORD
 
-2. Start the stack:
-
-```bash
 docker compose --env-file .env -f docker-compose.prod.yaml up -d --build
 ```
 
-3. Open:
+The build takes 2-5 minutes. It compiles the React dashboard and Spring Boot app into a **single container** — both API and dashboard are served on port `8080`.
 
-- API: `http://<server>:8080`
-- Swagger: `http://<server>:8080/swagger-ui.html`
+| What | URL |
+|---|---|
+| Dashboard + API | `http://<server>:8080` |
+| Swagger | `http://<server>:8080/swagger-ui.html` |
 
-Note: If you have a frontend bundle in `src/main/resources/static`, Spring Boot will serve it at `/` (same `:8080`). If you want the Vite dev dashboard instead, use `docker-compose.yaml`.
+## Coolify
 
-Spring profile note: the compose files don’t set `SPRING_PROFILES_ACTIVE`, so the app runs with Spring’s default profile. If you need a specific profile, add `SPRING_PROFILES_ACTIVE` to the `eventara` service in `docker-compose.prod.yaml` (or `springboot` in `docker-compose.yaml`).
+1. **Add a new resource** → Docker Compose
+2. Paste the contents of `docker-compose.prod.yaml` (or point it to the repo)
+3. Add the environment variables from `.env.example` in the **Environment Variables** tab
+4. Set the exposed port to `8080`
+5. Deploy
+
+Coolify will handle the build and TLS for you.
+
+## DigitalOcean / Generic Ubuntu VPS
+
+```bash
+# SSH into your droplet
+ssh root@<your-ip>
+
+# Install Docker (if not already installed)
+curl -fsSL https://get.docker.com | sh
+
+# Clone and deploy
+git clone https://github.com/tusharkhatriofficial/eventara.git
+cd eventara
+cp .env.example .env
+nano .env  # change POSTGRES_PASSWORD at minimum
+
+docker compose --env-file .env -f docker-compose.prod.yaml up -d --build
+```
 
 ## Common operations
 
@@ -46,17 +66,37 @@ docker compose -f docker-compose.prod.yaml down
 docker compose -f docker-compose.prod.yaml down -v
 ```
 
-## Kafka without Zookeeper (KRaft)
+## Resource limits
 
-`docker-compose.yaml` and `docker-compose.prod.yaml` run Kafka in **KRaft mode**, so there is no Zookeeper container.
+The prod compose file sets memory limits:
 
-Important: `KAFKA_KRAFT_CLUSTER_ID` must stay stable for a given Kafka data volume. If you change it, wipe the Kafka volume (`docker compose down -v`) before starting again.
+| Service | Memory Limit |
+|---|---|
+| Postgres | 1 GB |
+| Kafka | 1 GB |
+| Redis | 512 MB |
+| Eventara (API + Dashboard) | 1 GB |
 
-## Suggested changes for a real production setup
+Total: ~3.5 GB. A 4 GB VPS works for demos and light use.
 
-These aren’t required for a “get it up in a few hours” deployment, but they’re the usual next steps:
+## Environment variables
 
-1. **Use a real image registry** (GHCR/Docker Hub) and deploy by pulling an image instead of building on the server.
-2. **Don’t publish Postgres/Redis ports** to the public internet (keep them on the Docker network only).
-3. Put Eventara behind a reverse proxy (Nginx/Caddy) for TLS and (later) auth.
-4. Replace the default credentials in `.env` and store secrets in your VM’s secret manager.
+| Variable | Default | Description |
+|---|---|---|
+| `POSTGRES_USER` | `postgres` | Database user |
+| `POSTGRES_PASSWORD` | `mysecretpassword` | **Change this** |
+| `POSTGRES_DB` | `eventara` | Database name |
+| `CLUSTER_ID` | `NvDmnaWzQgiH8qbnraqxcg` | Kafka KRaft cluster ID — don't change after first boot |
+| `EVENTARA_PORT` | `8080` | Host port for the app |
+| `JAVA_OPTS` | `-Xms256m -Xmx512m` | JVM memory settings |
+
+## Kafka (KRaft mode)
+
+No Zookeeper needed. `CLUSTER_ID` must stay stable for a given Kafka data volume. If you change it, wipe the volume first (`docker compose down -v`).
+
+## Production hardening checklist
+
+- [ ] Change default database password in `.env`
+- [ ] Put behind a reverse proxy (Nginx/Caddy) for TLS
+- [ ] Don't expose Postgres/Redis ports to the internet (prod compose already doesn't)
+- [ ] Use a managed database if scaling beyond a single node
