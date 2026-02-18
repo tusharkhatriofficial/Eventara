@@ -51,7 +51,6 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
-      # Internal-only listener for production (no host port published)
       KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9094
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
@@ -80,8 +79,9 @@ services:
         limits:
           memory: 1g
 
+  # Spring Boot API (internal only — not exposed to host)
   eventara:
-    image: eventara:latest
+    image: eventara-api:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -93,8 +93,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    ports:
-      - "${EVENTARA_PORT:-8080}:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-eventara}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -107,7 +105,6 @@ services:
 
       EVENTARA_METRICS_DISTRIBUTED_ENABLED: "${EVENTARA_METRICS_DISTRIBUTED_ENABLED:-true}"
 
-      # JVM memory — adjust based on your VPS RAM
       JAVA_OPTS: "${JAVA_OPTS:--Xms256m -Xmx512m}"
     networks:
       - eventara-network
@@ -115,6 +112,24 @@ services:
       resources:
         limits:
           memory: 1g
+
+  # React Dashboard (nginx — public entry point)
+  dashboard:
+    image: eventara-dashboard:latest
+    build:
+      context: ./eventara-dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - eventara
+    ports:
+      - "${EVENTARA_PORT:-8080}:80"
+    networks:
+      - eventara-network
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
 volumes:
   postgres_data:

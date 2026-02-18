@@ -261,7 +261,7 @@ echo ""
 ## 🎬 Demo Flow Script (What to Say)
 
 ### Intro (30 seconds)
-> "Eventara is a real-time event monitoring platform that helps engineering teams catch production issues before they become outages.
+> "Eventara is a real-time event alerting and monitoring platform that helps engineering teams catch production issues before they become outages.
 > 
 > Today I'll show you 4 real-world alerting scenarios that our system handles out of the box."
 
