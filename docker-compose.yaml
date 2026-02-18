@@ -7,15 +7,15 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: eventara
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-eventara}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - eventara-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -38,67 +38,50 @@ services:
       timeout: 5s
       retries: 5
 
-  # Zookeeper (Required for Kafka)
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: eventara-zookeeper
-    restart: unless-stopped
-    ports:
-      - "2181:2181"
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - eventara-network
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Kafka Broker
+  # Kafka Broker (KRaft mode - no Zookeeper)
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: bitnami/kafka:3.7
     container_name: eventara-kafka
     restart: unless-stopped
-    depends_on:
-      zookeeper:
-        condition: service_healthy
     ports:
-      - "9092:9092"
       - "9093:9093"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_KRAFT_CLUSTER_ID: ${KAFKA_KRAFT_CLUSTER_ID:-NvDmnaWzQgiH8qbnraqxcg}
+
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: controller,broker
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       # Listeners for internal (Docker) and external (localhost) connections
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9092,EXTERNAL://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CFG_LISTENERS: INTERNAL://:9092,EXTERNAL://:9093,CONTROLLER://:9094
+      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://${KAFKA_EXTERNAL_HOST:-localhost}:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
 
       # Topic defaults
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_NUM_PARTITIONS: 3
-      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_CFG_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_CFG_NUM_PARTITIONS: 3
+      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
 
       # Performance settings
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
       # Log settings
-      KAFKA_LOG_RETENTION_HOURS: 168
-      KAFKA_LOG_SEGMENT_BYTES: 1073741824
-      KAFKA_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
+      KAFKA_CFG_LOG_RETENTION_HOURS: 168
+      KAFKA_CFG_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_CFG_LOG_RETENTION_CHECK_INTERVAL_MS: 300000
     volumes:
-      - kafka_data:/var/lib/kafka/data
+      - kafka_data:/bitnami/kafka
     networks:
       - eventara-network
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -116,7 +99,6 @@ services:
   #   environment:
   #     KAFKA_CLUSTERS_0_NAME: eventara-cluster
   #     KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-  #     KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
   #   networks:
   #     - eventara-network
 
@@ -138,9 +120,9 @@ services:
       - "8080:8080"
     environment:
       # Database config
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/eventara
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: mysecretpassword
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-eventara}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-mysecretpassword}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
 
       # Kafka config
@@ -151,10 +133,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
 
       # Metrics config
-      EVENTARA_METRICS_DISTRIBUTED_ENABLED: "true"
-
-      # Profile
-      SPRING_PROFILES_ACTIVE: docker
+      EVENTARA_METRICS_DISTRIBUTED_ENABLED: "${EVENTARA_METRICS_DISTRIBUTED_ENABLED:-true}"
     networks:
       - eventara-network
 
@@ -214,10 +193,10 @@ networks:
 #
 # Access PostgreSQL:
 #   docker exec -it postgres14 bash
-#   psql -U postgres -d eventara
+#   psql -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-eventara}"
 #
 # List Kafka topics:
-#   docker exec -it eventara-kafka kafka-topics --bootstrap-server localhost:9092 --list
+#   docker exec -it eventara-kafka kafka-topics.sh --bootstrap-server kafka:9092 --list
 #
 # Access Kafka UI:
 #   http://localhost:8090
