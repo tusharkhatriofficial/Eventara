@@ -1,0 +1,35 @@
+# === Build artifacts ===
+target/
+!target/*.jar
+
+# === Dashboard build deps (handled inside Docker) ===
+eventara-dashboard/node_modules/
+eventara-dashboard/dist/
+
+# === IDE / editor ===
+.idea/
+*.iml
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+
+# === OS junk ===
+.DS_Store
+Thumbs.db
+
+# === Git ===
+.git/
+.gitignore
+
+# === Docs & non-essential ===
+ai-docs/
+*.md
+LICENSE
+
+# === Docker (don't send compose files into the build) ===
+docker-compose*.yaml
+.env
+.env.example
+Dockerfile

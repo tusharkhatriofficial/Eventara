@@ -15,6 +15,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
   redis:
     image: redis:7-alpine
@@ -29,42 +34,51 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: apache/kafka:latest
     restart: unless-stopped
     environment:
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      KAFKA_KRAFT_CLUSTER_ID: ${KAFKA_KRAFT_CLUSTER_ID:-NvDmnaWzQgiH8qbnraqxcg}
+      CLUSTER_ID: ${CLUSTER_ID:-NvDmnaWzQgiH8qbnraqxcg}
 
-      KAFKA_CFG_NODE_ID: 1
-      KAFKA_CFG_PROCESS_ROLES: controller,broker
-      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
-      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
 
       # Internal-only listener for production (no host port published)
-      KAFKA_CFG_LISTENERS: INTERNAL://:9092,CONTROLLER://:9094
-      KAFKA_CFG_ADVERTISED_LISTENERS: INTERNAL://kafka:9092
-      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
-      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
 
-      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_CFG_NUM_PARTITIONS: 3
-      KAFKA_CFG_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
 
-      KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_CFG_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/opt/kafka/kafka-logs
     networks:
       - eventara-network
     healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:9092", "--list"]
       interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
   eventara:
     image: eventara:latest
@@ -80,7 +94,7 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "${EVENTARA_PORT:-8080}:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-eventara}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -92,8 +106,15 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
 
       EVENTARA_METRICS_DISTRIBUTED_ENABLED: "${EVENTARA_METRICS_DISTRIBUTED_ENABLED:-true}"
+
+      # JVM memory — adjust based on your VPS RAM
+      JAVA_OPTS: "${JAVA_OPTS:--Xms256m -Xmx512m}"
     networks:
       - eventara-network
+    deploy:
+      resources:
+        limits:
+          memory: 1g
 
 volumes:
   postgres_data:

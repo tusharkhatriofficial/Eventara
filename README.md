@@ -144,7 +144,7 @@ Core stack in one Docker Compose file. Full stack in 30 seconds.
 | Layer | Technology |
 |---|---|
 | Runtime | Java 21, Spring Boot 3.5.7 |
-| Messaging | Apache Kafka 3.7 (KRaft mode; no Zookeeper) |
+| Messaging | Apache Kafka (KRaft mode; no Zookeeper) |
 | Time-series | TimescaleDB (PostgreSQL 14) |
 | Cache / Metrics | Redis 7 |
 | Rule Engine | Java handler pattern (Drools for DRL validation) |
