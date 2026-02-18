@@ -94,6 +94,8 @@ cd eventara
 docker compose up --build -d
 ```
 
+For a VM-style deploy using a Docker image, see [`DEPLOYMENT.md`](./DEPLOYMENT.md).
+
 | Service | URL |
 |---|---|
 | Dashboard | http://localhost:5173 |
@@ -133,7 +135,7 @@ Your Services --> REST API (Spring Boot) --> Kafka --> Redis (real-time metrics)
                                                      Dashboard (React + Vite)
 ```
 
-6 containers. One Docker Compose file. Full stack in 30 seconds.
+Core stack in one Docker Compose file. Full stack in 30 seconds.
 
 ---
 
@@ -142,7 +144,7 @@ Your Services --> REST API (Spring Boot) --> Kafka --> Redis (real-time metrics)
 | Layer | Technology |
 |---|---|
 | Runtime | Java 21, Spring Boot 3.5.7 |
-| Messaging | Apache Kafka 7.5.0 (Confluent) |
+| Messaging | Apache Kafka 3.7 (KRaft mode; no Zookeeper) |
 | Time-series | TimescaleDB (PostgreSQL 14) |
 | Cache / Metrics | Redis 7 |
 | Rule Engine | Java handler pattern (Drools for DRL validation) |
